@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Enter delivery details, review your SnapShop order, and proceed to payment.">
+  <title>Checkout | SnapShop</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="checkout">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="SnapShop home">
+        <img src="assets/logo.svg" alt="SnapShop logo">
+        <span>SnapShop</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+        <a href="index.html">Home</a>
+        <a href="shop.html">Shop</a>
+        <a href="about.html">About</a>
+        <a href="faq.html">FAQ</a>
+        <a href="contact.html">Contact</a>
+        <a class="cart-link" href="cart.html">Cart <span class="cart-count" aria-live="polite">0</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="page-shell">
+    <div class="container">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="index.html">Home</a>
+        <span>/</span>
+        <a href="cart.html">Cart</a>
+        <span>/</span>
+        <span aria-current="page">Checkout</span>
+      </nav>
+      <section class="page-hero compact">
+        <p class="eyebrow">Checkout</p>
+        <h1>Simple and straightforward order completion.</h1>
+        <p>Customers can confirm their details, choose delivery, and proceed to payment in a few steps.</p>
+      </section>
+
+      <section class="checkout-layout">
+        <article class="card">
+          <h2>Delivery Details</h2>
+          <form id="checkout-form" novalidate>
+            <div class="form-grid">
+              <label>
+                <span>Full name</span>
+                <input name="fullName" type="text" required>
+              </label>
+              <label>
+                <span>Email address</span>
+                <input name="email" type="email" required>
+              </label>
+              <label>
+                <span>Phone number</span>
+                <input name="phone" type="tel" required>
+              </label>
+              <label>
+                <span>City</span>
+                <input name="city" type="text" required>
+              </label>
+              <label class="full-width">
+                <span>Delivery address</span>
+                <input name="address" type="text" required>
+              </label>
+              <label>
+                <span>Delivery option</span>
+                <select name="deliveryOption">
+                  <option value="Standard Delivery">Standard Delivery</option>
+                  <option value="Same-Day Kampala Delivery">Same-Day Kampala Delivery</option>
+                  <option value="Store Pickup">Store Pickup</option>
+                </select>
+              </label>
+              <label>
+                <span>Preferred payment method</span>
+                <select name="paymentMethod">
+                  <option value="Mobile Money">Mobile Money</option>
+                  <option value="Card">Card</option>
+                  <option value="Cash On Delivery">Cash On Delivery</option>
+                </select>
+              </label>
+            </div>
+            <button class="button button-primary" type="submit">Continue To Payment</button>
+            <p id="checkout-message" class="form-message" aria-live="polite"></p>
+          </form>
+        </article>
+        <aside class="card">
+          <h2>Order Summary</h2>
+          <div id="checkout-summary" aria-live="polite"></div>
+        </aside>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <h2>SnapShop</h2>
+        <p>Checkout designed to be quick, readable, and user friendly.</p>
+      </div>
+      <div>
+        <h3>Before payment</h3>
+        <p><a href="cart.html">Edit cart</a></p>
+      </div>
+      <div>
+        <h3>Support</h3>
+        <p><a href="contact.html">Customer support</a></p>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p>&copy; <span class="current-year"></span> SnapShop.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

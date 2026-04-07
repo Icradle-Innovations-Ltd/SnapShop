@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Complete your SnapShop payment using the secure payment step and receive order confirmation.">
+  <title>Payment | SnapShop</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="payment">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="SnapShop home">
+        <img src="assets/logo.svg" alt="SnapShop logo">
+        <span>SnapShop</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+        <a href="index.html">Home</a>
+        <a href="shop.html">Shop</a>
+        <a href="about.html">About</a>
+        <a href="faq.html">FAQ</a>
+        <a href="contact.html">Contact</a>
+        <a class="cart-link" href="cart.html">Cart <span class="cart-count" aria-live="polite">0</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="page-shell">
+    <div class="container">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="index.html">Home</a>
+        <span>/</span>
+        <a href="cart.html">Cart</a>
+        <span>/</span>
+        <a href="checkout.html">Checkout</a>
+        <span>/</span>
+        <span aria-current="page">Payment</span>
+      </nav>
+      <section class="page-hero compact">
+        <p class="eyebrow">Payment Step</p>
+        <h1>Complete payment and confirm the order.</h1>
+        <p>This page provides the required pay link and final confirmation process.</p>
+      </section>
+
+      <section class="checkout-layout">
+        <article class="card">
+          <h2>Pay Securely</h2>
+          <p id="payment-customer" class="info-panel"></p>
+          <div id="payment-summary" aria-live="polite"></div>
+          <button id="complete-payment" class="button button-primary" type="button">Pay Now</button>
+          <p id="payment-message" class="form-message" aria-live="polite"></p>
+        </article>
+        <aside class="card">
+          <h2>Accepted Methods</h2>
+          <ul class="check-list">
+            <li>Mobile Money</li>
+            <li>Debit or credit card</li>
+            <li>Cash on delivery for selected areas</li>
+          </ul>
+          <p>The final order reference will appear here after successful payment.</p>
+        </aside>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <h2>SnapShop</h2>
+        <p>Visible, guided, and easy payment flow.</p>
+      </div>
+      <div>
+        <h3>Need to edit?</h3>
+        <p><a href="checkout.html">Return to checkout</a></p>
+      </div>
+      <div>
+        <h3>Contact</h3>
+        <p><a href="contact.html">Get support</a></p>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p>&copy; <span class="current-year"></span> SnapShop.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

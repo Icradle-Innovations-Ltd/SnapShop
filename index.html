@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="SnapShop is a Kampala-based e-commerce website for creator gadgets, smart accessories, audio gear, power solutions, and fast delivery.">
+  <meta name="keywords" content="ecommerce Uganda, creator gadgets, smart accessories, online shopping Kampala, power banks, ring lights, audio gear">
+  <title>SnapShop | Smart Accessories For Creative Lives</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="home">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="SnapShop home">
+        <img src="assets/logo.svg" alt="SnapShop logo">
+        <span>SnapShop</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+        <a href="index.html" aria-current="page">Home</a>
+        <a href="shop.html">Shop</a>
+        <a href="about.html">About</a>
+        <a href="faq.html">FAQ</a>
+        <a href="contact.html">Contact</a>
+        <a class="cart-link" href="cart.html">Cart <span class="cart-count" aria-live="polite">0</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow">Fast. Clear. Reliable.</p>
+          <h1>Smart accessories that keep work, content, and daily life moving.</h1>
+          <p class="lead">SnapShop helps students, creators, and professionals in Uganda buy trusted gadgets online without the stress of endless searching.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="shop.html">Shop Now</a>
+            <a class="button button-secondary" href="about.html">Why SnapShop</a>
+          </div>
+          <ul class="mini-stats" aria-label="Business highlights">
+            <li><strong>Same-day</strong> Kampala delivery on selected orders</li>
+            <li><strong>5 categories</strong> of practical tech products</li>
+            <li><strong>Secure checkout</strong> with clear payment step</li>
+          </ul>
+        </div>
+        <div class="hero-card">
+          <div class="hero-badge">Featured Bundle</div>
+          <h2>Creator Starter Pack</h2>
+          <p>Ring light, tripod, webcam, and power backup for home studios and mobile content work.</p>
+          <div class="hero-price">UGX 325,000</div>
+          <a class="button button-primary" href="shop.html">Explore Bundle Items</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-heading">
+          <p class="eyebrow">Shop By Need</p>
+          <h2>Categories designed around real customer tasks</h2>
+        </div>
+        <div class="category-grid">
+          <article class="card category-card">
+            <h3>Creator Gear</h3>
+            <p>Lighting, tripods, and webcams for classes, meetings, and online content.</p>
+          </article>
+          <article class="card category-card">
+            <h3>Audio</h3>
+            <p>Wireless earbuds and speakers for clear sound on the move.</p>
+          </article>
+          <article class="card category-card">
+            <h3>Power</h3>
+            <p>Power banks and charging tools that reduce downtime.</p>
+          </article>
+          <article class="card category-card">
+            <h3>Workspace</h3>
+            <p>Desk accessories that make study and work sessions more comfortable.</p>
+          </article>
+          <article class="card category-card">
+            <h3>Smart Home</h3>
+            <p>Simple connected devices that save time and improve control.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section-soft">
+      <div class="container">
+        <div class="section-heading">
+          <p class="eyebrow">Best Sellers</p>
+          <h2>Products customers look for first</h2>
+        </div>
+        <div id="featured-products" class="product-grid" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container promo-grid">
+        <article class="card promise-card">
+          <h2>Why customers trust SnapShop</h2>
+          <ul class="check-list">
+            <li>Clear product descriptions and visible prices</li>
+            <li>Simple checkout with delivery and payment guidance</li>
+            <li>Contact details shown on every page</li>
+            <li>Responsive design for phones, tablets, and desktops</li>
+          </ul>
+        </article>
+        <article class="card poll-card">
+          <p class="eyebrow">Interactive Poll</p>
+          <h2>What should we launch next?</h2>
+          <p>Cast one quick vote and help shape our next product line.</p>
+          <div class="poll-options" role="group" aria-label="Product launch poll">
+            <button class="button button-secondary poll-option" type="button" data-poll-choice="Phone Stabilizers">Phone Stabilizers</button>
+            <button class="button button-secondary poll-option" type="button" data-poll-choice="Portable Projectors">Portable Projectors</button>
+            <button class="button button-secondary poll-option" type="button" data-poll-choice="Smart Watches">Smart Watches</button>
+          </div>
+          <p id="poll-status" class="form-message" aria-live="polite"></p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <h2>SnapShop</h2>
+        <p>Electronic commerce made practical for creators, learners, and professionals in Uganda.</p>
+      </div>
+      <div>
+        <h3>Visit</h3>
+        <p>Plot 14, Yusuf Lule Road, Kampala</p>
+        <p>+256 704 555 120</p>
+        <p>hello@snapshop.ug</p>
+      </div>
+      <div>
+        <h3>Explore</h3>
+        <p><a href="shop.html">Products</a></p>
+        <p><a href="faq.html">FAQ</a></p>
+        <p><a href="sitemap.html">Sitemap</a></p>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p>&copy; <span class="current-year"></span> SnapShop. Built for Electronic Commerce Technologies.</p>
+    </div>
+  </footer>
+
+  <div id="status-toast" class="status-toast" aria-live="polite" aria-atomic="true"></div>
+  <script src="script.js"></script>
+</body>
+</html>

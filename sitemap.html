@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="View the SnapShop page structure and website hierarchy.">
+  <title>Sitemap | SnapShop</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="sitemap">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="SnapShop home">
+        <img src="assets/logo.svg" alt="SnapShop logo">
+        <span>SnapShop</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+        <a href="index.html">Home</a>
+        <a href="shop.html">Shop</a>
+        <a href="about.html">About</a>
+        <a href="faq.html">FAQ</a>
+        <a href="contact.html">Contact</a>
+        <a class="cart-link" href="cart.html">Cart <span class="cart-count" aria-live="polite">0</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="page-shell">
+    <div class="container">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="index.html">Home</a>
+        <span>/</span>
+        <span aria-current="page">Sitemap</span>
+      </nav>
+      <section class="page-hero compact">
+        <p class="eyebrow">Website Structure</p>
+        <h1>Clear hierarchy helps users find information quickly.</h1>
+        <p>This sitemap shows how SnapShop pages are organized for navigation and management.</p>
+      </section>
+
+      <section class="card sitemap-card">
+        <ul class="sitemap-list">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="shop.html">Shop</a></li>
+          <li><a href="cart.html">Cart</a></li>
+          <li><a href="checkout.html">Checkout</a></li>
+          <li><a href="payment.html">Payment</a></li>
+          <li><a href="about.html">About</a></li>
+          <li><a href="faq.html">FAQ</a></li>
+          <li><a href="contact.html">Contact</a></li>
+        </ul>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <h2>SnapShop</h2>
+        <p>Simple navigation makes shopping easier.</p>
+      </div>
+      <div>
+        <h3>Main pages</h3>
+        <p><a href="index.html">Homepage</a></p>
+        <p><a href="shop.html">Product catalogue</a></p>
+      </div>
+      <div>
+        <h3>Customer journey</h3>
+        <p><a href="cart.html">Cart</a></p>
+        <p><a href="payment.html">Payment</a></p>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p>&copy; <span class="current-year"></span> SnapShop.</p>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

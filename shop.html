@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Browse SnapShop products by category, compare prices, and add items to your cart.">
+  <meta name="keywords" content="shop gadgets Uganda, audio accessories, power banks Kampala, ecommerce products">
+  <title>Shop | SnapShop</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="shop">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="SnapShop home">
+        <img src="assets/logo.svg" alt="SnapShop logo">
+        <span>SnapShop</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+        <a href="index.html">Home</a>
+        <a href="shop.html" aria-current="page">Shop</a>
+        <a href="about.html">About</a>
+        <a href="faq.html">FAQ</a>
+        <a href="contact.html">Contact</a>
+        <a class="cart-link" href="cart.html">Cart <span class="cart-count" aria-live="polite">0</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="page-shell">
+    <div class="container">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="index.html">Home</a>
+        <span>/</span>
+        <span aria-current="page">Shop</span>
+      </nav>
+      <section class="page-hero compact">
+        <p class="eyebrow">Product Catalogue</p>
+        <h1>Search by category, compare prices, and shop with confidence.</h1>
+        <p>Each product includes a simple description, visible pricing, and a quick add-to-cart option.</p>
+      </section>
+
+      <section class="catalog-toolbar card">
+        <label class="toolbar-field">
+          <span>Search products</span>
+          <input id="product-search" type="search" placeholder="Search by product name">
+        </label>
+        <div id="category-filters" class="chip-row" aria-label="Product categories"></div>
+      </section>
+
+      <section>
+        <div id="catalog-results" class="product-grid" aria-live="polite"></div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <h2>SnapShop</h2>
+        <p>Tools and accessories for smart, fast, and flexible digital living.</p>
+      </div>
+      <div>
+        <h3>Support</h3>
+        <p><a href="faq.html">FAQ</a></p>
+        <p><a href="contact.html">Contact us</a></p>
+      </div>
+      <div>
+        <h3>Checkout</h3>
+        <p><a href="cart.html">View cart</a></p>
+        <p><a href="checkout.html">Proceed to checkout</a></p>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p>&copy; <span class="current-year"></span> SnapShop.</p>
+    </div>
+  </footer>
+
+  <div id="status-toast" class="status-toast" aria-live="polite" aria-atomic="true"></div>
+  <script src="script.js"></script>
+</body>
+</html>

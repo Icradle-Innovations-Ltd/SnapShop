@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Review your SnapShop cart, update quantities, remove items, or proceed to checkout.">
+  <title>Cart | SnapShop</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="cart">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="SnapShop home">
+        <img src="assets/logo.svg" alt="SnapShop logo">
+        <span>SnapShop</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+        <a href="index.html">Home</a>
+        <a href="shop.html">Shop</a>
+        <a href="about.html">About</a>
+        <a href="faq.html">FAQ</a>
+        <a href="contact.html">Contact</a>
+        <a class="cart-link" href="cart.html" aria-current="page">Cart <span class="cart-count" aria-live="polite">0</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="page-shell">
+    <div class="container">
+      <nav class="breadcrumb" aria-label="Breadcrumb">
+        <a href="index.html">Home</a>
+        <span>/</span>
+        <span aria-current="page">Cart</span>
+      </nav>
+      <section class="page-hero compact">
+        <p class="eyebrow">Shopping Cart</p>
+        <h1>Review items, update the contents, and continue to payment.</h1>
+        <p>The cart is functional and shows quantity, totals, and simple checkout controls.</p>
+      </section>
+
+      <section class="cart-layout">
+        <article class="card">
+          <div id="cart-items" aria-live="polite"></div>
+        </article>
+        <aside class="card cart-summary">
+          <h2>Cart Summary</h2>
+          <div id="cart-summary"></div>
+          <button id="clear-cart" class="button button-secondary" type="button">Empty Cart</button>
+          <a class="button button-primary" href="checkout.html">Proceed To Checkout</a>
+        </aside>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <h2>SnapShop</h2>
+        <p>Transparent pricing and easy cart control.</p>
+      </div>
+      <div>
+        <h3>Need products?</h3>
+        <p><a href="shop.html">Keep shopping</a></p>
+      </div>
+      <div>
+        <h3>Ready to order?</h3>
+        <p><a href="checkout.html">Open checkout</a></p>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p>&copy; <span class="current-year"></span> SnapShop.</p>
+    </div>
+  </footer>
+
+  <div id="status-toast" class="status-toast" aria-live="polite" aria-atomic="true"></div>
+  <script src="script.js"></script>
+</body>
+</html>

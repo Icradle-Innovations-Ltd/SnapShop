@@ -7,6 +7,73 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id              String           @id @default(cuid())
+  name            String
+  email           String           @unique
+  passwordHash    String
+  role            UserRole
+  isActive        Boolean          @default(true)
+  vendorProfile   VendorProfile?
+  customerProfile CustomerProfile?
+  products        Product[]
+  contactMessages ContactMessage[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model VendorProfile {
+  id          String       @id @default(cuid())
+  userId      String       @unique
+  businessName String
+  phone       String?
+  status      VendorStatus @default(PENDING)
+  approvedAt  DateTime?
+  store       Store?
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model CustomerProfile {
+  id         String    @id @default(cuid())
+  userId     String    @unique
+  phone      String?
+  orders     Order[]
+  addresses  Address[]
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Address {
+  id                String          @id @default(cuid())
+  customerProfileId String
+  label             String
+  city              String
+  addressLine       String
+  isDefault         Boolean         @default(false)
+  customerProfile   CustomerProfile @relation(fields: [customerProfileId], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@index([customerProfileId])
+}
+
+model Store {
+  id              String         @id @default(cuid())
+  vendorProfileId String         @unique
+  name            String
+  slug            String         @unique
+  description     String
+  status          StoreStatus    @default(DRAFT)
+  products        Product[]
+  orders          Order[]
+  vendorProfile   VendorProfile  @relation(fields: [vendorProfileId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
 model Category {
   id          String    @id @default(cuid())
   name        String    @unique
@@ -18,29 +85,42 @@ model Category {
 }
 
 model Product {
-  id               String      @id @default(cuid())
-  name             String
-  slug             String      @unique
-  description      String
-  price            Int
-  featured         Boolean     @default(false)
-  active           Boolean     @default(true)
-  visualCode       String
-  categoryId       String
-  category         Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  orderItems       OrderItem[]
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  id            String        @id @default(cuid())
+  name          String
+  slug          String        @unique
+  description   String
+  sku           String        @unique
+  price         Int
+  stockQuantity Int           @default(0)
+  featured      Boolean       @default(false)
+  active        Boolean       @default(true)
+  status        ProductStatus @default(DRAFT)
+  visualCode    String
+  categoryId    String
+  storeId       String
+  createdById   String?
+  category      Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  store         Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdBy     User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  orderItems    OrderItem[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
 
   @@index([categoryId])
+  @@index([storeId])
+  @@index([createdById])
 }
 
 model ContactMessage {
   id        String   @id @default(cuid())
+  userId     String?
   name      String
   email     String
   message   String
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model PollVote {
@@ -50,21 +130,29 @@ model PollVote {
 }
 
 model Order {
-  id             String       @id @default(cuid())
-  orderNumber    String       @unique
-  customerName   String
-  email          String
-  phone          String
-  city           String
-  address        String
-  deliveryOption String
-  paymentMethod  String
-  serviceFee     Int
-  total          Int
-  status         OrderStatus  @default(PENDING)
-  items          OrderItem[]
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
+  id               String               @id @default(cuid())
+  orderNumber      String               @unique
+  customerProfileId String?
+  storeId          String
+  customerName     String
+  email            String
+  phone            String
+  city             String
+  address          String
+  deliveryOption   String
+  paymentMethod    String
+  serviceFee       Int
+  total            Int
+  status           OrderStatus          @default(PENDING)
+  items            OrderItem[]
+  statusHistory    OrderStatusHistory[]
+  customerProfile  CustomerProfile?     @relation(fields: [customerProfileId], references: [id], onDelete: SetNull)
+  store            Store                @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([customerProfileId])
+  @@index([storeId])
 }
 
 model OrderItem {
@@ -83,9 +171,51 @@ model OrderItem {
   @@index([productId])
 }
 
+model OrderStatusHistory {
+  id        String      @id @default(cuid())
+  orderId    String
+  status    OrderStatus
+  note      String?
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@index([orderId])
+}
+
+enum UserRole {
+  ADMIN
+  VENDOR
+  CUSTOMER
+  PICKUP_AGENT
+  ACCOUNT_MANAGER
+}
+
+enum VendorStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum StoreStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
 enum OrderStatus {
   PENDING
   PAID
-  FULFILLED
+  PROCESSING
+  READY_FOR_PICKUP
+  ASSIGNED_TO_AGENT
+  IN_TRANSIT
+  DELIVERED
   CANCELLED
+  RETURN_REQUESTED
 }

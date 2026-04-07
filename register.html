@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Create a SnapShop customer or vendor account.">
+  <title>Register | SnapShop</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="register">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="SnapShop home">
+        <img src="assets/logo.svg" alt="SnapShop logo">
+        <span>SnapShop</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+        <a href="index.html">Home</a>
+        <a href="shop.html">Shop</a>
+        <a href="about.html">About</a>
+        <a href="faq.html">FAQ</a>
+        <a href="contact.html">Contact</a>
+        <a class="cart-link" href="cart.html">Cart <span class="cart-count" aria-live="polite">0</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="page-shell">
+    <div class="container auth-layout">
+      <section class="auth-panel">
+        <p class="eyebrow">Join The Marketplace</p>
+        <h1>Create an account that matches how you use SnapShop.</h1>
+        <p>Customers can manage orders and saved addresses. Vendors can apply, get approved, and then create stores and product listings.</p>
+      </section>
+
+      <section class="card auth-card">
+        <form id="register-form" novalidate>
+          <h2>Register</h2>
+          <label>
+            <span>Full name</span>
+            <input name="name" type="text" required>
+          </label>
+          <label>
+            <span>Email address</span>
+            <input name="email" type="email" required>
+          </label>
+          <label>
+            <span>Password</span>
+            <input name="password" type="password" required>
+          </label>
+          <label>
+            <span>Account type</span>
+            <select id="register-role" name="role">
+              <option value="CUSTOMER">Customer</option>
+              <option value="VENDOR">Vendor</option>
+            </select>
+          </label>
+          <label>
+            <span>Phone number</span>
+            <input name="phone" type="tel">
+          </label>
+          <label id="business-name-field" class="is-hidden">
+            <span>Business name</span>
+            <input name="businessName" type="text">
+          </label>
+          <button class="button button-primary" type="submit">Create Account</button>
+          <p id="register-message" class="form-message" aria-live="polite"></p>
+        </form>
+        <p class="auth-switch">Already registered? <a href="login.html">Sign in here</a>.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <h2>SnapShop</h2>
+        <p>Built for practical marketplace workflows.</p>
+      </div>
+      <div>
+        <h3>Next Step</h3>
+        <p><a href="login.html">Login</a></p>
+      </div>
+      <div>
+        <h3>Storefront</h3>
+        <p><a href="shop.html">Browse products</a></p>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p>&copy; <span class="current-year"></span> SnapShop.</p>
+    </div>
+  </footer>
+
+  <div id="status-toast" class="status-toast" aria-live="polite" aria-atomic="true"></div>
+  <script src="script.js"></script>
+  <script src="auth-ui.js"></script>
+</body>
+</html>

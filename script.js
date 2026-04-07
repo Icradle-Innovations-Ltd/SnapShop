@@ -101,6 +101,7 @@ const CART_KEY = "snapshopCart";
 const CHECKOUT_KEY = "snapshopCheckout";
 const ORDERS_KEY = "snapshopOrders";
 const POLL_KEY = "snapshopPollChoice";
+const AUTH_TOKEN_KEY = "snapshopAuthToken";
 const API_BASE = "/api";
 
 let productsCache = [...DEFAULT_PRODUCTS];
@@ -154,9 +155,11 @@ async function loadProducts() {
 }
 
 async function apiRequest(path, options = {}) {
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
   const response = await fetch(`${API_BASE}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options.headers || {})
     },
     ...options

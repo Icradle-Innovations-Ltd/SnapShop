@@ -12,7 +12,15 @@ function assertEmail(value) {
   }
 }
 
+function assertPassword(value) {
+  assertNonEmptyString(value, "Password");
+  if (String(value).length < 8) {
+    throw new Error("Password must be at least 8 characters long.");
+  }
+}
+
 module.exports = {
   assertNonEmptyString,
-  assertEmail
+  assertEmail,
+  assertPassword
 };

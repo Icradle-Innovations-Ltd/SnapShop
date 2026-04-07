@@ -1,6 +1,10 @@
 const express = require("express");
 const path = require("path");
 const apiRouter = require("./routes/api");
+const authRouter = require("./routes/auth");
+const vendorRouter = require("./routes/vendor");
+const customerRouter = require("./routes/customer");
+const adminRouter = require("./routes/admin");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
 const PAGE_FILES = new Set([
@@ -12,7 +16,10 @@ const PAGE_FILES = new Set([
   "cart.html",
   "checkout.html",
   "payment.html",
-  "sitemap.html"
+  "sitemap.html",
+  "login.html",
+  "register.html",
+  "dashboard.html"
 ]);
 
 function sendPage(page) {
@@ -30,7 +37,12 @@ function createApp() {
   app.use("/assets", express.static(path.join(ROOT_DIR, "assets")));
   app.get("/styles.css", (req, res) => res.sendFile(path.join(ROOT_DIR, "styles.css")));
   app.get("/script.js", (req, res) => res.sendFile(path.join(ROOT_DIR, "script.js")));
+  app.get("/auth-ui.js", (req, res) => res.sendFile(path.join(ROOT_DIR, "auth-ui.js")));
 
+  app.use("/api/auth", authRouter);
+  app.use("/api/vendor", vendorRouter);
+  app.use("/api/customer", customerRouter);
+  app.use("/api/admin", adminRouter);
   app.use("/api", apiRouter);
 
   app.get("/", sendPage("index.html"));

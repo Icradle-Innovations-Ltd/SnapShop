@@ -10,6 +10,7 @@ const {
   POLL_CHOICES
 } = require("../services/storeService");
 const { assertEmail, assertNonEmptyString } = require("../utils/validation");
+const { optionalAuth } = require("../middleware/auth");
 
 const router = express.Router();
 
@@ -72,13 +73,13 @@ router.post("/poll-votes", async (req, res, next) => {
   }
 });
 
-router.post("/contact-messages", async (req, res, next) => {
+router.post("/contact-messages", optionalAuth, async (req, res, next) => {
   try {
     assertNonEmptyString(req.body.name, "Name");
     assertEmail(req.body.email);
     assertNonEmptyString(req.body.message, "Message");
 
-    const contactMessage = await createContactMessage(req.body);
+    const contactMessage = await createContactMessage(req.body, req.auth?.user || null);
     res.status(201).json({
       message: "Message received successfully.",
       contactMessage
@@ -88,7 +89,7 @@ router.post("/contact-messages", async (req, res, next) => {
   }
 });
 
-router.post("/orders", async (req, res, next) => {
+router.post("/orders", optionalAuth, async (req, res, next) => {
   try {
     assertNonEmptyString(req.body.fullName, "Full name");
     assertEmail(req.body.email);
@@ -98,7 +99,7 @@ router.post("/orders", async (req, res, next) => {
     assertNonEmptyString(req.body.deliveryOption, "Delivery option");
     assertNonEmptyString(req.body.paymentMethod, "Payment method");
 
-    const order = await createOrder(req.body);
+    const order = await createOrder(req.body, req.auth?.user || null);
     res.status(201).json({
       message: "Order created successfully.",
       orderNumber: order.orderNumber,
@@ -117,6 +118,23 @@ router.get("/orders/:orderNumber", async (req, res, next) => {
       return res.status(404).json({ error: "Order not found." });
     }
     return res.json({ order });
+  } catch (error) {
+    return next(error);
+  }
+});
+
+router.get("/orders/:orderNumber/track", async (req, res, next) => {
+  try {
+    const order = await getOrderByNumber(req.params.orderNumber);
+    if (!order) {
+      return res.status(404).json({ error: "Order not found." });
+    }
+
+    return res.json({
+      orderNumber: order.orderNumber,
+      status: order.status,
+      statusHistory: order.statusHistory || []
+    });
   } catch (error) {
     return next(error);
   }

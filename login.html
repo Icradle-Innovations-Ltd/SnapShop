@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Log in to SnapShop as a customer, vendor, or admin.">
+  <title>Login | SnapShop</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body data-page="login">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="site-header">
+    <div class="container header-inner">
+      <a class="brand" href="index.html" aria-label="SnapShop home">
+        <img src="assets/logo.svg" alt="SnapShop logo">
+        <span>SnapShop</span>
+      </a>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <nav id="site-nav" class="site-nav" aria-label="Main navigation">
+        <a href="index.html">Home</a>
+        <a href="shop.html">Shop</a>
+        <a href="about.html">About</a>
+        <a href="faq.html">FAQ</a>
+        <a href="contact.html">Contact</a>
+        <a class="cart-link" href="cart.html">Cart <span class="cart-count" aria-live="polite">0</span></a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main-content" class="page-shell">
+    <div class="container auth-layout">
+      <section class="auth-panel">
+        <p class="eyebrow">Access Your Workspace</p>
+        <h1>Sign in to manage your marketplace workflow.</h1>
+        <p>Customers can track orders, vendors can manage stores and products, and admins can review marketplace activity.</p>
+        <div class="demo-credentials card">
+          <h2>Demo Accounts</h2>
+          <button class="button button-secondary demo-login" type="button" data-email="customer@snapshop.ug" data-password="Customer123!">Use Customer Demo</button>
+          <button class="button button-secondary demo-login" type="button" data-email="vendor@snapshop.ug" data-password="Vendor123!">Use Vendor Demo</button>
+          <button class="button button-secondary demo-login" type="button" data-email="admin@snapshop.ug" data-password="Admin123!">Use Admin Demo</button>
+        </div>
+      </section>
+
+      <section class="card auth-card">
+        <form id="login-form" novalidate>
+          <h2>Login</h2>
+          <label>
+            <span>Email address</span>
+            <input name="email" type="email" required>
+          </label>
+          <label>
+            <span>Password</span>
+            <input name="password" type="password" required>
+          </label>
+          <button class="button button-primary" type="submit">Sign In</button>
+          <p id="login-message" class="form-message" aria-live="polite"></p>
+        </form>
+        <p class="auth-switch">Need an account? <a href="register.html">Create one here</a>.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container footer-grid">
+      <div>
+        <h2>SnapShop</h2>
+        <p>Marketplace access for vendors, customers, and admins.</p>
+      </div>
+      <div>
+        <h3>Quick Links</h3>
+        <p><a href="register.html">Register</a></p>
+        <p><a href="shop.html">Browse products</a></p>
+      </div>
+      <div>
+        <h3>Support</h3>
+        <p><a href="contact.html">Contact support</a></p>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <p>&copy; <span class="current-year"></span> SnapShop.</p>
+    </div>
+  </footer>
+
+  <div id="status-toast" class="status-toast" aria-live="polite" aria-atomic="true"></div>
+  <script src="script.js"></script>
+  <script src="auth-ui.js"></script>
+</body>
+</html>

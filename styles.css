@@ -156,7 +156,9 @@ textarea {
 .promo-grid,
 .checkout-layout,
 .cart-layout,
-.form-layout {
+.form-layout,
+.auth-layout,
+.dashboard-grid {
   display: grid;
   gap: 1.5rem;
 }
@@ -165,6 +167,16 @@ textarea {
   grid-template-columns: 1.35fr 0.95fr;
   align-items: center;
   min-height: 70vh;
+}
+
+.auth-layout {
+  grid-template-columns: 1fr 1fr;
+  align-items: start;
+}
+
+.dashboard-grid {
+  grid-template-columns: 1fr 1fr;
+  margin-bottom: 1.5rem;
 }
 
 .hero-copy h1,
@@ -201,7 +213,8 @@ textarea {
 .hero-actions,
 .social-links,
 .chip-row,
-.poll-options {
+.poll-options,
+.auth-inline {
   display: flex;
   flex-wrap: wrap;
   gap: 0.8rem;
@@ -409,6 +422,47 @@ textarea {
   margin-bottom: 1.5rem;
 }
 
+.auth-panel,
+.auth-card,
+.dashboard-card {
+  padding: 2rem;
+}
+
+.auth-panel h1 {
+  margin: 0.25rem 0 1rem;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-family: Georgia, "Times New Roman", serif;
+  line-height: 1.1;
+}
+
+.auth-card form,
+.dashboard-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.demo-credentials {
+  margin-top: 1.5rem;
+}
+
+.demo-credentials .button {
+  width: 100%;
+}
+
+.auth-switch {
+  margin-top: 1rem;
+  color: var(--muted);
+}
+
+.auth-switch a {
+  color: var(--brand);
+  font-weight: 700;
+}
+
+.is-hidden {
+  display: none;
+}
+
 .toolbar-field {
   display: grid;
   gap: 0.4rem;
@@ -525,6 +579,98 @@ label {
   color: var(--muted);
 }
 
+.dashboard-callout,
+.metric-strip,
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: fit-content;
+}
+
+.status-pill {
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: var(--surface-strong);
+  color: var(--brand);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.metric-strip {
+  flex-wrap: wrap;
+}
+
+.metric-card {
+  padding: 1rem 1.1rem;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(217, 119, 6, 0.05), rgba(24, 78, 58, 0.04));
+}
+
+.metric-card strong {
+  display: block;
+  font-size: 1.35rem;
+  color: var(--brand);
+}
+
+.dashboard-section {
+  padding: 1.5rem;
+}
+
+.dashboard-section h2,
+.auth-card h2 {
+  margin-top: 0;
+}
+
+.dashboard-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.dashboard-item {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #fff;
+}
+
+.dashboard-item h3,
+.dashboard-item h4 {
+  margin: 0 0 0.4rem;
+}
+
+.dashboard-meta {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.dashboard-two-column {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 1.5rem;
+}
+
+.dashboard-empty {
+  padding: 1rem 0;
+  color: var(--muted);
+}
+
+.nav-auth {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.nav-auth .button {
+  padding: 0.7rem 1rem;
+}
+
+.nav-auth-name {
+  color: var(--brand);
+  font-weight: 700;
+}
+
 .two-column-text {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -609,6 +755,9 @@ details summary {
   .cart-layout,
   .checkout-layout,
   .form-layout,
+  .auth-layout,
+  .dashboard-grid,
+  .dashboard-two-column,
   .two-column-text,
   .footer-grid {
     grid-template-columns: 1fr;

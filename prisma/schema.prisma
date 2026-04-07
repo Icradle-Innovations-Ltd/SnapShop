@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  slug        String    @unique
+  description String
+  products    Product[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+}
+
+model Product {
+  id               String      @id @default(cuid())
+  name             String
+  slug             String      @unique
+  description      String
+  price            Int
+  featured         Boolean     @default(false)
+  active           Boolean     @default(true)
+  visualCode       String
+  categoryId       String
+  category         Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  orderItems       OrderItem[]
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([categoryId])
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  email     String
+  message   String
+  createdAt DateTime @default(now())
+}
+
+model PollVote {
+  id        String   @id @default(cuid())
+  choice    String
+  createdAt DateTime @default(now())
+}
+
+model Order {
+  id             String       @id @default(cuid())
+  orderNumber    String       @unique
+  customerName   String
+  email          String
+  phone          String
+  city           String
+  address        String
+  deliveryOption String
+  paymentMethod  String
+  serviceFee     Int
+  total          Int
+  status         OrderStatus  @default(PENDING)
+  items          OrderItem[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId     String
+  productId   String?
+  productName String
+  quantity    Int
+  unitPrice   Int
+  lineTotal   Int
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product     Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  FULFILLED
+  CANCELLED
+}

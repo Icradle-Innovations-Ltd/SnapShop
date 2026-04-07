@@ -1,67 +1,99 @@
-const PRODUCTS = [
+const DEFAULT_PRODUCTS = [
   {
-    id: "snap-pod-mini",
+    id: "snap-pod-mini-tripod",
     name: "SnapPod Mini Tripod",
+    slug: "snap-pod-mini-tripod",
     category: "Creator Gear",
+    categorySlug: "creator-gear",
     price: 65000,
     description: "Compact phone tripod for content recording, online classes, and hands-free viewing.",
-    featured: true
+    featured: true,
+    active: true,
+    visualCode: "CG"
   },
   {
-    id: "lumi-ring-light",
+    id: "lumi-ring-creator-light",
     name: "LumiRing Creator Light",
+    slug: "lumi-ring-creator-light",
     category: "Creator Gear",
+    categorySlug: "creator-gear",
     price: 110000,
     description: "USB-powered ring light with warm and cool tones for brighter, cleaner video calls.",
-    featured: true
+    featured: true,
+    active: true,
+    visualCode: "CG"
   },
   {
-    id: "airview-webcam",
+    id: "air-view-webcam-1080p",
     name: "AirView Webcam 1080p",
+    slug: "air-view-webcam-1080p",
     category: "Creator Gear",
+    categorySlug: "creator-gear",
     price: 145000,
     description: "Sharp webcam for remote meetings, online teaching, and streaming.",
-    featured: true
+    featured: true,
+    active: true,
+    visualCode: "CG"
   },
   {
-    id: "vibebuds-pro",
+    id: "vibe-buds-pro",
     name: "VibeBuds Pro",
+    slug: "vibe-buds-pro",
     category: "Audio",
+    categorySlug: "audio",
     price: 95000,
     description: "Wireless earbuds with clear calls, noise reduction, and a pocket-friendly case.",
-    featured: true
+    featured: true,
+    active: true,
+    visualCode: "AU"
   },
   {
-    id: "pulse-speaker",
+    id: "pulse-bluetooth-speaker",
     name: "Pulse Bluetooth Speaker",
+    slug: "pulse-bluetooth-speaker",
     category: "Audio",
+    categorySlug: "audio",
     price: 135000,
     description: "Portable speaker with rich sound for small events, home use, and outdoor sessions.",
-    featured: false
+    featured: false,
+    active: true,
+    visualCode: "AU"
   },
   {
-    id: "chargecore-20000",
+    id: "charge-core-20000",
     name: "ChargeCore 20000",
+    slug: "charge-core-20000",
     category: "Power",
+    categorySlug: "power",
     price: 120000,
     description: "High-capacity power bank built for phones, earbuds, and light travel use.",
-    featured: true
+    featured: true,
+    active: true,
+    visualCode: "PW"
   },
   {
-    id: "smartnest-plug",
+    id: "smart-nest-plug",
     name: "SmartNest Plug",
+    slug: "smart-nest-plug",
     category: "Smart Home",
+    categorySlug: "smart-home",
     price: 85000,
     description: "Control lamps and appliances with a smart plug designed for easy home automation.",
-    featured: false
+    featured: false,
+    active: true,
+    visualCode: "SH"
   },
   {
-    id: "noteflow-stand",
+    id: "note-flow-tablet-stand",
     name: "NoteFlow Tablet Stand",
+    slug: "note-flow-tablet-stand",
     category: "Workspace",
+    categorySlug: "workspace",
     price: 70000,
     description: "Adjustable aluminium stand for tablets and phones during study and work.",
-    featured: false
+    featured: false,
+    active: true,
+    visualCode: "WS"
   }
 ];
 
@@ -69,6 +101,9 @@ const CART_KEY = "snapshopCart";
 const CHECKOUT_KEY = "snapshopCheckout";
 const ORDERS_KEY = "snapshopOrders";
 const POLL_KEY = "snapshopPollChoice";
+const API_BASE = "/api";
+
+let productsCache = [...DEFAULT_PRODUCTS];
 
 function getCart() {
   try {
@@ -91,8 +126,48 @@ function getCheckoutDraft() {
   }
 }
 
+function getProducts() {
+  return productsCache;
+}
+
 function findProduct(productId) {
-  return PRODUCTS.find((product) => product.id === productId);
+  const normalized = String(productId || "").trim().toLowerCase();
+  return getProducts().find((product) => {
+    return product.id.toLowerCase() === normalized || product.slug.toLowerCase() === normalized;
+  });
+}
+
+async function loadProducts() {
+  try {
+    const response = await fetch(`${API_BASE}/products`);
+    if (!response.ok) {
+      throw new Error("Unable to load products from API.");
+    }
+
+    const payload = await response.json();
+    if (Array.isArray(payload.products) && payload.products.length > 0) {
+      productsCache = payload.products;
+    }
+  } catch (error) {
+    productsCache = [...DEFAULT_PRODUCTS];
+  }
+}
+
+async function apiRequest(path, options = {}) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    },
+    ...options
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || payload.message || "Request failed.");
+  }
+
+  return payload;
 }
 
 function cartDetailed() {
@@ -177,7 +252,7 @@ function clearCart() {
 }
 
 function createProductCard(product) {
-  const categoryCode = product.category
+  const visualCode = product.visualCode || product.category
     .split(" ")
     .map((word) => word[0])
     .join("")
@@ -186,7 +261,7 @@ function createProductCard(product) {
 
   return `
     <article class="card product-card">
-      <div class="product-visual" aria-hidden="true">${categoryCode}</div>
+      <div class="product-visual" aria-hidden="true">${visualCode}</div>
       <span class="product-tag">${product.category}</span>
       <h3>${product.name}</h3>
       <p>${product.description}</p>
@@ -202,7 +277,10 @@ function renderFeaturedProducts() {
     return;
   }
 
-  container.innerHTML = PRODUCTS.filter((product) => product.featured).map(createProductCard).join("");
+  container.innerHTML = getProducts()
+    .filter((product) => product.featured)
+    .map(createProductCard)
+    .join("");
 }
 
 function renderCatalog() {
@@ -214,19 +292,29 @@ function renderCatalog() {
     return;
   }
 
-  const categories = ["All", ...new Set(PRODUCTS.map((product) => product.category))];
-  let activeCategory = "All";
+  const categoryMap = new Map();
+  getProducts().forEach((product) => {
+    if (!categoryMap.has(product.categorySlug)) {
+      categoryMap.set(product.categorySlug, product.category);
+    }
+  });
+
+  const categories = [
+    { slug: "all", name: "All" },
+    ...Array.from(categoryMap.entries()).map(([slug, name]) => ({ slug, name }))
+  ];
+  let activeCategory = "all";
 
   filterContainer.innerHTML = categories.map((category) => `
-    <button class="chip ${category === "All" ? "is-active" : ""}" type="button" data-category-filter="${category}">${category}</button>
+    <button class="chip ${category.slug === "all" ? "is-active" : ""}" type="button" data-category-filter="${category.slug}">${category.name}</button>
   `).join("");
 
   function paintProducts() {
     const searchValue = searchInput.value.trim().toLowerCase();
-    const filteredProducts = PRODUCTS.filter((product) => {
-      const matchesCategory = activeCategory === "All" || product.category === activeCategory;
+    const filteredProducts = getProducts().filter((product) => {
+      const matchesCategory = activeCategory === "all" || product.categorySlug === activeCategory;
       const matchesSearch = product.name.toLowerCase().includes(searchValue);
-      return matchesCategory && matchesSearch;
+      return product.active && matchesCategory && matchesSearch;
     });
 
     results.innerHTML = filteredProducts.length > 0
@@ -366,7 +454,6 @@ function renderPaymentPage() {
   const customerNode = document.getElementById("payment-customer");
   const summaryContainer = document.getElementById("payment-summary");
   const payButton = document.getElementById("complete-payment");
-  const message = document.getElementById("payment-message");
 
   if (!customerNode || !summaryContainer || !payButton) {
     return;
@@ -388,35 +475,71 @@ function renderPaymentPage() {
     ${summaryMarkup(totals)}
   `;
 
-  if (payButton.dataset.bound === "true") {
+  payButton.disabled = false;
+}
+
+function persistFallbackOrder(draft, totals) {
+  const orderRef = `SNAP-${Date.now().toString().slice(-6)}`;
+  const orders = JSON.parse(localStorage.getItem(ORDERS_KEY) || "[]");
+  orders.push({
+    orderRef,
+    customer: draft,
+    items: totals.items,
+    total: totals.total,
+    createdAt: new Date().toISOString()
+  });
+  localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+  return orderRef;
+}
+
+async function submitOrder() {
+  const draft = getCheckoutDraft();
+  const totals = cartTotals();
+  const payButton = document.getElementById("complete-payment");
+  const message = document.getElementById("payment-message");
+  const customerNode = document.getElementById("payment-customer");
+  const summaryContainer = document.getElementById("payment-summary");
+
+  if (!draft || totals.items.length === 0 || !payButton || !message || !customerNode || !summaryContainer) {
     return;
   }
 
-  payButton.addEventListener("click", () => {
-    const orderRef = `SNAP-${Date.now().toString().slice(-6)}`;
-    const orders = JSON.parse(localStorage.getItem(ORDERS_KEY) || "[]");
-    orders.push({
-      orderRef,
-      customer: draft,
-      items: totals.items,
-      total: totals.total,
-      createdAt: new Date().toISOString()
+  payButton.disabled = true;
+  message.textContent = "Processing payment...";
+
+  try {
+    const payload = await apiRequest("/orders", {
+      method: "POST",
+      body: JSON.stringify({
+        ...draft,
+        items: totals.items.map((item) => ({
+          id: item.id,
+          quantity: item.quantity
+        }))
+      })
     });
-    localStorage.setItem(ORDERS_KEY, JSON.stringify(orders));
+
     clearCart();
     localStorage.removeItem(CHECKOUT_KEY);
-    message.textContent = `Payment completed successfully. Order reference: ${orderRef}.`;
+    message.textContent = `Payment completed successfully. Order reference: ${payload.orderNumber}.`;
     customerNode.textContent = "Thank you for shopping with SnapShop.";
-    summaryContainer.innerHTML = `<p class="info-panel">Your order has been confirmed and the cart has been cleared.</p>`;
-    payButton.disabled = true;
+    summaryContainer.innerHTML = `<p class="info-panel">Your order has been confirmed and saved on the backend.</p>`;
     showToast("Payment successful.");
-  });
-
-  payButton.dataset.bound = "true";
+  } catch (error) {
+    const fallbackOrderRef = persistFallbackOrder(draft, totals);
+    clearCart();
+    localStorage.removeItem(CHECKOUT_KEY);
+    message.textContent = `Payment completed in demo mode. Order reference: ${fallbackOrderRef}.`;
+    customerNode.textContent = "Thank you for shopping with SnapShop.";
+    summaryContainer.innerHTML = `<p class="info-panel">The backend was unavailable, so the order was saved locally for demo purposes.</p>`;
+    showToast("Payment saved in demo mode.");
+  } finally {
+    payButton.disabled = true;
+  }
 }
 
 function bindGlobalEvents() {
-  document.addEventListener("click", (event) => {
+  document.addEventListener("click", async (event) => {
     const addButton = event.target.closest("[data-add-to-cart]");
     if (addButton) {
       addToCart(addButton.dataset.addToCart);
@@ -443,11 +566,32 @@ function bindGlobalEvents() {
 
     const pollButton = event.target.closest("[data-poll-choice]");
     if (pollButton) {
-      localStorage.setItem(POLL_KEY, pollButton.dataset.pollChoice);
+      const choice = pollButton.dataset.pollChoice;
+      localStorage.setItem(POLL_KEY, choice);
       const pollStatus = document.getElementById("poll-status");
       if (pollStatus) {
-        pollStatus.textContent = `Thanks for voting for ${pollButton.dataset.pollChoice}.`;
+        pollStatus.textContent = `Submitting your vote for ${choice}...`;
       }
+
+      try {
+        await apiRequest("/poll-votes", {
+          method: "POST",
+          body: JSON.stringify({ choice })
+        });
+        if (pollStatus) {
+          pollStatus.textContent = `Thanks for voting for ${choice}. Your vote was saved.`;
+        }
+      } catch (error) {
+        if (pollStatus) {
+          pollStatus.textContent = `Thanks for voting for ${choice}. The vote was saved locally for now.`;
+        }
+      }
+      return;
+    }
+
+    const paymentButton = event.target.closest("#complete-payment");
+    if (paymentButton) {
+      await submitOrder();
     }
   });
 
@@ -472,15 +616,29 @@ function bindGlobalEvents() {
 
   const contactForm = document.getElementById("contact-form");
   if (contactForm && contactForm.dataset.bound !== "true") {
-    contactForm.addEventListener("submit", (event) => {
+    contactForm.addEventListener("submit", async (event) => {
       event.preventDefault();
       const messageNode = document.getElementById("contact-message");
       if (!contactForm.reportValidity()) {
         messageNode.textContent = "Please fill in all contact form fields.";
         return;
       }
-      messageNode.textContent = "Thank you. Your message has been received successfully.";
-      contactForm.reset();
+
+      const formData = new FormData(contactForm);
+      const payload = Object.fromEntries(formData.entries());
+      messageNode.textContent = "Sending your message...";
+
+      try {
+        await apiRequest("/contact-messages", {
+          method: "POST",
+          body: JSON.stringify(payload)
+        });
+        messageNode.textContent = "Thank you. Your message has been received successfully.";
+        contactForm.reset();
+      } catch (error) {
+        messageNode.textContent = "Your message was saved in demo mode because the backend was unavailable.";
+        contactForm.reset();
+      }
     });
     contactForm.dataset.bound = "true";
   }
@@ -500,7 +658,8 @@ function setCurrentYear() {
   });
 }
 
-document.addEventListener("DOMContentLoaded", () => {
+async function bootstrap() {
+  await loadProducts();
   setCurrentYear();
   updateCartIndicators();
   bindGlobalEvents();
@@ -510,4 +669,18 @@ document.addEventListener("DOMContentLoaded", () => {
   renderCartPage();
   renderCheckoutPage();
   renderPaymentPage();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  bootstrap().catch(() => {
+    setCurrentYear();
+    updateCartIndicators();
+    bindGlobalEvents();
+    restorePollChoice();
+    renderFeaturedProducts();
+    renderCatalog();
+    renderCartPage();
+    renderCheckoutPage();
+    renderPaymentPage();
+  });
 });

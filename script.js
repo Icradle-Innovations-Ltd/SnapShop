@@ -458,7 +458,6 @@ function renderCatalog() {
       ? sorted.map(createProductCard).join("")
       : `<article class="card empty-state"><span class="empty-state-icon">🔍</span><h2>No products found</h2><p>Try a different search term or category.</p></article>`;
   }
-  }
 
   filterContainer.addEventListener("click", (event) => {
     const button = event.target.closest("[data-category-filter]");

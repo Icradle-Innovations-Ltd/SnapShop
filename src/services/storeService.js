@@ -4,6 +4,14 @@ const { memoryStore } = require("../store/memoryStore");
 const { createOrderNumber, calculateCartTotals } = require("../utils/orders");
 const { hashPassword, verifyPassword, signJwt } = require("../utils/auth");
 const { slugify } = require("../utils/slug");
+const { isConfigured: cloudinaryReady, deleteImage } = require("../lib/cloudinary");
+
+/** Extract Cloudinary public_id from a Cloudinary URL, or null */
+function cloudinaryPublicId(url) {
+  if (!url || !url.includes("res.cloudinary.com")) return null;
+  const m = url.match(/\/upload\/(?:v\d+\/)?(.+?)(?:\.[a-z]+)?$/);
+  return m ? m[1] : null;
+}
 
 function sanitizeUser(user) {
   if (!user) {
@@ -1591,7 +1599,8 @@ async function addProductImages(userId, productId, imageFiles) {
     const newImages = imageFiles.map((f, i) => ({
       id: `img-${Date.now()}-${i}`,
       productId,
-      url: `/uploads/products/${f.filename}`,
+      url: f.cloudinaryUrl || `/uploads/products/${f.filename}`,
+      publicId: f.filename,
       alt: product.name,
       position: startPos + i,
       createdAt: new Date().toISOString()
@@ -1612,16 +1621,17 @@ async function addProductImages(userId, productId, imageFiles) {
   await prisma.productImage.createMany({
     data: imageFiles.map((f, i) => ({
       productId,
-      url: `/uploads/products/${f.filename}`,
+      url: f.cloudinaryUrl || `/uploads/products/${f.filename}`,
       alt: product.name,
       position: existingCount + i
     }))
   });
 
   if (!product.imageUrl && imageFiles.length > 0) {
+    const firstUrl = imageFiles[0].cloudinaryUrl || `/uploads/products/${imageFiles[0].filename}`;
     await prisma.product.update({
       where: { id: productId },
-      data: { imageUrl: `/uploads/products/${imageFiles[0].filename}` }
+      data: { imageUrl: firstUrl }
     });
   }
 
@@ -1645,6 +1655,9 @@ async function deleteProductImage(userId, productId, imageId) {
     const idx = product.images.findIndex((img) => img.id === imageId);
     if (idx === -1) throw new Error("Image not found.");
     const removed = product.images.splice(idx, 1)[0];
+    /* Clean up cloud image */
+    const pid = cloudinaryPublicId(removed.url);
+    if (pid && cloudinaryReady) deleteImage(pid).catch(() => {});
     if (product.imageUrl === removed.url) {
       product.imageUrl = product.images.length > 0 ? product.images[0].url : null;
     }
@@ -1662,6 +1675,10 @@ async function deleteProductImage(userId, productId, imageId) {
   if (!image) throw new Error("Image not found.");
 
   await prisma.productImage.delete({ where: { id: imageId } });
+
+  /* Clean up cloud image */
+  const pid = cloudinaryPublicId(image.url);
+  if (pid && cloudinaryReady) deleteImage(pid).catch(() => {});
 
   if (product.imageUrl === image.url) {
     const firstImage = await prisma.productImage.findFirst({

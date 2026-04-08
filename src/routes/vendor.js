@@ -1,5 +1,6 @@
 const express = require("express");
 const path = require("path");
+const fs = require("fs");
 const multer = require("multer");
 const {
   createVendorStore,
@@ -15,14 +16,19 @@ const {
 } = require("../services/storeService");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { assertNonEmptyString } = require("../utils/validation");
+const { isConfigured: cloudinaryReady, uploadImage, deleteImage } = require("../lib/cloudinary");
 
-const storage = multer.diskStorage({
+/* Disk storage fallback when Cloudinary is not configured */
+const diskStorage = multer.diskStorage({
   destination: path.join(__dirname, "../../uploads/products"),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname).toLowerCase();
     cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`);
   }
 });
+
+/* Use memory storage when Cloudinary is ready (temp buffer → cloud upload) */
+const memStorage = multer.memoryStorage();
 
 function fileFilter(req, file, cb) {
   const allowed = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
@@ -34,7 +40,11 @@ function fileFilter(req, file, cb) {
   }
 }
 
-const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
+const upload = multer({
+  storage: cloudinaryReady ? memStorage : diskStorage,
+  fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }
+});
 
 const router = express.Router();
 
@@ -106,7 +116,28 @@ router.post("/products/:id/images", upload.array("images", 5), async (req, res, 
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ error: "At least one image file is required." });
     }
-    const product = await addProductImages(req.auth.user.id, req.params.id, req.files);
+
+    let processedFiles;
+    if (cloudinaryReady) {
+      /* Upload each file buffer to Cloudinary */
+      processedFiles = [];
+      for (const file of req.files) {
+        /* Write temp file then upload (Cloudinary SDK needs a path or data URI) */
+        const tmpPath = path.join(__dirname, "../../uploads/products", file.originalname);
+        fs.writeFileSync(tmpPath, file.buffer);
+        try {
+          const { url, publicId } = await uploadImage(tmpPath);
+          processedFiles.push({ filename: publicId, cloudinaryUrl: url });
+        } finally {
+          fs.unlinkSync(tmpPath);
+        }
+      }
+    } else {
+      /* Fallback: disk-only, filename already set by multer */
+      processedFiles = req.files.map((f) => ({ filename: f.filename }));
+    }
+
+    const product = await addProductImages(req.auth.user.id, req.params.id, processedFiles);
     res.json({ message: "Images uploaded successfully.", product });
   } catch (error) {
     next(error);

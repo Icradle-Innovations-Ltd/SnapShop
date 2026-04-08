@@ -61,32 +61,83 @@
           <summary>How do I contact SnapShop?</summary>
           <p>You can call, send email, or use the contact form on the Contact page. All major contact details are listed there.</p>
         </details>
+        <details class="card">
+          <summary>What is your return policy?</summary>
+          <p>We accept returns within 7 days of delivery for defective or incorrect items. Contact our support team with your order reference to start a return.</p>
+        </details>
+        <details class="card">
+          <summary>How do I become a vendor on SnapShop?</summary>
+          <p>Register for a vendor account, fill in your business details, and wait for admin approval. Once approved, you can set up your store and list products.</p>
+        </details>
+        <details class="card">
+          <summary>Can I track my order?</summary>
+          <p>Yes. After placing an order, you can track its status through your customer dashboard. Order updates are shown in real time.</p>
+        </details>
+        <details class="card">
+          <summary>Is my payment information secure?</summary>
+          <p>All transactions are processed securely. We do not store credit card details on our servers, and all data is transmitted using encrypted connections.</p>
+        </details>
+        <details class="card">
+          <summary>Do you offer bulk or wholesale pricing?</summary>
+          <p>Yes, for orders above 10 units. Contact our team through the contact page to discuss wholesale arrangements and special pricing.</p>
+        </details>
       </section>
     </div>
   </main>
 
-  <footer class="site-footer">
+    <footer class="site-footer">
+    <div class="container">
+      <div class="newsletter-section">
+        <h2>Stay in the loop</h2>
+        <p>Get updates on new arrivals, deals, and creator tips.</p>
+        <form class="newsletter-form" id="newsletter-form">
+          <input type="email" placeholder="you@example.com" required>
+          <button type="submit">Subscribe</button>
+        </form>
+      </div>
+    </div>
     <div class="container footer-grid">
       <div>
         <h2>SnapShop</h2>
-        <p>Clear answers, clear checkout, and clear support.</p>
+        <p>Electronic commerce made practical for creators, learners, and professionals in Uganda.</p>
+        <div class="footer-social">
+          <a href="#" aria-label="Twitter">X</a>
+          <a href="#" aria-label="Instagram">IG</a>
+          <a href="#" aria-label="Facebook">FB</a>
+        </div>
       </div>
       <div>
-        <h3>Support</h3>
-        <p><a href="contact.html">Contact us</a></p>
-        <p><a href="cart.html">Your cart</a></p>
+        <h3>Visit</h3>
+        <p>Plot 14, Yusuf Lule Road, Kampala</p>
+        <p>+256 704 555 120</p>
+        <p>hello@snapshop.ug</p>
       </div>
       <div>
         <h3>Explore</h3>
-        <p><a href="shop.html">Shop all</a></p>
+        <p><a href="shop.html">Products</a></p>
+        <p><a href="faq.html">FAQ</a></p>
         <p><a href="sitemap.html">Sitemap</a></p>
+      </div>
+      <div>
+        <h3>Account</h3>
+        <p><a href="login.html">Sign In</a></p>
+        <p><a href="register.html">Create Account</a></p>
+        <p><a href="dashboard.html">Dashboard</a></p>
       </div>
     </div>
     <div class="container footer-bottom">
-      <p>&copy; <span class="current-year"></span> SnapShop.</p>
+      <p>&copy; <span class="current-year"></span> SnapShop. Built for Electronic Commerce Technologies.</p>
+      <div class="footer-bottom-links">
+        <a href="sitemap.html">Sitemap</a>
+        <a href="faq.html">FAQ</a>
+        <a href="contact.html">Support</a>
+      </div>
     </div>
   </footer>
 
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">&uarr;</button>
+  <div id="status-toast" class="status-toast" aria-live="polite" aria-atomic="true"></div>
   <script src="script.js"></script>
+  <script src="auth-ui.js"></script>
 </body>
 </html>

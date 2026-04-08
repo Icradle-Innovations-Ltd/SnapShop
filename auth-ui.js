@@ -360,29 +360,54 @@
 
   async function renderAdminView() {
     const vendors = await request("/admin/vendors/pending").then((data) => data.vendors).catch(() => []);
+    let allOrders = [];
+    try { allOrders = (await request("/admin/orders")).orders || []; } catch {}
+    let allUsers = [];
+    try { allUsers = (await request("/admin/users")).users || []; } catch {}
+
+    const totalRevenue = allOrders.reduce((s, o) => s + (o.total || 0), 0);
 
     return `
       <section class="card dashboard-section">
         <p class="eyebrow">Admin Workspace</p>
         <div class="metric-strip">
           ${metric("Pending Vendors", String(vendors.length))}
+          ${metric("Total Orders", String(allOrders.length))}
+          ${metric("Revenue", formatMoney(totalRevenue))}
+          ${metric("Users", String(allUsers.length))}
           ${metric("Role", "Admin")}
         </div>
       </section>
-      <section class="card dashboard-section">
-        <h2>Pending Vendor Approvals</h2>
-        <div class="dashboard-list">
-          ${vendors.length
-            ? vendors.map((vendor) => `
-              <article class="dashboard-item">
-                <h3>${safe(vendor.businessName)}</h3>
-                <p class="dashboard-meta">${safe(vendor.user?.name || "")} | ${safe(vendor.user?.email || "")}</p>
-                <p class="dashboard-meta">${safe(vendor.phone || "No phone provided")}</p>
-                <button class="button button-primary" type="button" data-approve-vendor="${safe(vendor.id)}">Approve Vendor</button>
-              </article>
-            `).join("")
-            : `<p class="dashboard-empty">No pending vendor approvals right now.</p>`}
-        </div>
+      <section class="dashboard-two-column">
+        <article class="card dashboard-section">
+          <h2>Pending Vendor Approvals</h2>
+          <div class="dashboard-list">
+            ${vendors.length
+              ? vendors.map((vendor) => `
+                <article class="dashboard-item">
+                  <h3>${safe(vendor.businessName)}</h3>
+                  <p class="dashboard-meta">${safe(vendor.user?.name || "")} | ${safe(vendor.user?.email || "")}</p>
+                  <p class="dashboard-meta">${safe(vendor.phone || "No phone provided")}</p>
+                  <button class="button button-primary" type="button" data-approve-vendor="${safe(vendor.id)}">Approve Vendor</button>
+                </article>
+              `).join("")
+              : `<p class="dashboard-empty">No pending vendor approvals right now.</p>`}
+          </div>
+        </article>
+        <article class="card dashboard-section">
+          <h2>Recent Orders</h2>
+          <div class="dashboard-list">
+            ${allOrders.length
+              ? allOrders.slice(0, 10).map((order) => `
+                <article class="dashboard-item">
+                  <h3>${safe(order.orderNumber)}</h3>
+                  <p class="dashboard-meta">${formatMoney(order.total)} | ${safe(roleLabel(order.status))}</p>
+                  <p class="dashboard-meta">${safe(order.customer?.name || order.fullName || "")}</p>
+                </article>
+              `).join("")
+              : `<p class="dashboard-empty">No orders yet.</p>`}
+          </div>
+        </article>
       </section>
     `;
   }
@@ -557,6 +582,24 @@
     });
   }
 
+  function setupPasswordToggles() {
+    document.querySelectorAll('input[type="password"]').forEach((input) => {
+      if (input.parentElement.querySelector(".password-toggle")) return;
+      input.parentElement.classList.add("password-field");
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "password-toggle";
+      btn.textContent = "Show";
+      btn.setAttribute("aria-label", "Toggle password visibility");
+      btn.addEventListener("click", () => {
+        const isPassword = input.type === "password";
+        input.type = isPassword ? "text" : "password";
+        btn.textContent = isPassword ? "Hide" : "Show";
+      });
+      input.parentElement.appendChild(btn);
+    });
+  }
+
   async function init() {
     await refreshUser();
     renderNav();
@@ -573,6 +616,7 @@
 
     await handleLogin();
     await handleRegister();
+    setupPasswordToggles();
     bindGlobalClicks();
     await renderDashboard();
   }

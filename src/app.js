@@ -19,7 +19,10 @@ const PAGE_FILES = new Set([
   "sitemap.html",
   "login.html",
   "register.html",
-  "dashboard.html"
+  "dashboard.html",
+  "product.html",
+  "success.html",
+  "404.html"
 ]);
 
 function sendPage(page) {
@@ -52,9 +55,10 @@ function createApp() {
   });
 
   app.use((req, res) => {
-    res.status(404).json({
-      error: "Route not found."
-    });
+    if (req.path.startsWith("/api")) {
+      return res.status(404).json({ error: "Route not found." });
+    }
+    res.status(404).sendFile(path.join(ROOT_DIR, "404.html"));
   });
 
   app.use((error, req, res, next) => {

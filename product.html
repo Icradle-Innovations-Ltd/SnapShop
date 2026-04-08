@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Browse SnapShop products by category, compare prices, and add items to your cart.">
-  <meta name="keywords" content="shop gadgets Uganda, audio accessories, power banks Kampala, ecommerce products">
-  <title>Shop | SnapShop</title>
+  <meta name="description" content="Product details on SnapShop — Kampala's trusted store for creator gadgets and smart accessories.">
+  <title>Product — SnapShop</title>
   <link rel="stylesheet" href="styles.css">
 </head>
-<body data-page="shop">
+<body data-page="product">
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="site-header">
     <div class="container header-inner">
@@ -19,7 +18,7 @@
       <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
       <nav id="site-nav" class="site-nav" aria-label="Main navigation">
         <a href="index.html">Home</a>
-        <a href="shop.html" aria-current="page">Shop</a>
+        <a href="shop.html">Shop</a>
         <a href="about.html">About</a>
         <a href="faq.html">FAQ</a>
         <a href="contact.html">Contact</a>
@@ -28,44 +27,18 @@
     </div>
   </header>
 
-  <main id="main-content" class="page-shell">
-    <div class="container">
-      <nav class="breadcrumb" aria-label="Breadcrumb">
-        <a href="index.html">Home</a>
-        <span>/</span>
-        <span aria-current="page">Shop</span>
-      </nav>
-      <section class="page-hero compact">
-        <p class="eyebrow">Product Catalogue</p>
-        <h1>Search by category, compare prices, and shop with confidence.</h1>
-        <p>Each product includes a simple description, visible pricing, and a quick add-to-cart option.</p>
-      </section>
-
-      <section class="catalog-toolbar card">
-        <label class="toolbar-field">
-          <span>Search products</span>
-          <input id="product-search" type="search" placeholder="Search by product name">
-        </label>
-        <div id="category-filters" class="chip-row" aria-label="Product categories"></div>
-      </section>
-
-      <section>
-        <div id="catalog-results" class="product-grid" aria-live="polite"></div>
-      </section>
-    </div>
+  <main id="main-content">
+    <section class="page-shell">
+      <div class="container" id="product-detail">
+        <div class="product-grid">
+          <div class="skeleton skeleton-card"></div>
+          <div class="skeleton skeleton-card"></div>
+        </div>
+      </div>
+    </section>
   </main>
 
-    <footer class="site-footer">
-    <div class="container">
-      <div class="newsletter-section">
-        <h2>Stay in the loop</h2>
-        <p>Get updates on new arrivals, deals, and creator tips.</p>
-        <form class="newsletter-form" id="newsletter-form">
-          <input type="email" placeholder="you@example.com" required>
-          <button type="submit">Subscribe</button>
-        </form>
-      </div>
-    </div>
+  <footer class="site-footer">
     <div class="container footer-grid">
       <div>
         <h2>SnapShop</h2>

@@ -1,3 +1,14 @@
+const PRODUCT_IMAGES = {
+  "snap-pod-mini-tripod": "assets/products/tripod.svg",
+  "lumi-ring-creator-light": "assets/products/ring-light.svg",
+  "air-view-webcam-1080p": "assets/products/webcam.svg",
+  "vibe-buds-pro": "assets/products/earbuds.svg",
+  "pulse-bluetooth-speaker": "assets/products/speaker.svg",
+  "charge-core-20000": "assets/products/powerbank.svg",
+  "smart-nest-plug": "assets/products/smart-plug.svg",
+  "note-flow-tablet-stand": "assets/products/tablet-stand.svg"
+};
+
 const DEFAULT_PRODUCTS = [
   {
     id: "snap-pod-mini-tripod",
@@ -9,7 +20,8 @@ const DEFAULT_PRODUCTS = [
     description: "Compact phone tripod for content recording, online classes, and hands-free viewing.",
     featured: true,
     active: true,
-    visualCode: "CG"
+    visualCode: "CG",
+    image: "assets/products/tripod.svg"
   },
   {
     id: "lumi-ring-creator-light",
@@ -21,7 +33,8 @@ const DEFAULT_PRODUCTS = [
     description: "USB-powered ring light with warm and cool tones for brighter, cleaner video calls.",
     featured: true,
     active: true,
-    visualCode: "CG"
+    visualCode: "CG",
+    image: "assets/products/ring-light.svg"
   },
   {
     id: "air-view-webcam-1080p",
@@ -33,7 +46,8 @@ const DEFAULT_PRODUCTS = [
     description: "Sharp webcam for remote meetings, online teaching, and streaming.",
     featured: true,
     active: true,
-    visualCode: "CG"
+    visualCode: "CG",
+    image: "assets/products/webcam.svg"
   },
   {
     id: "vibe-buds-pro",
@@ -45,7 +59,8 @@ const DEFAULT_PRODUCTS = [
     description: "Wireless earbuds with clear calls, noise reduction, and a pocket-friendly case.",
     featured: true,
     active: true,
-    visualCode: "AU"
+    visualCode: "AU",
+    image: "assets/products/earbuds.svg"
   },
   {
     id: "pulse-bluetooth-speaker",
@@ -57,7 +72,8 @@ const DEFAULT_PRODUCTS = [
     description: "Portable speaker with rich sound for small events, home use, and outdoor sessions.",
     featured: false,
     active: true,
-    visualCode: "AU"
+    visualCode: "AU",
+    image: "assets/products/speaker.svg"
   },
   {
     id: "charge-core-20000",
@@ -69,7 +85,8 @@ const DEFAULT_PRODUCTS = [
     description: "High-capacity power bank built for phones, earbuds, and light travel use.",
     featured: true,
     active: true,
-    visualCode: "PW"
+    visualCode: "PW",
+    image: "assets/products/powerbank.svg"
   },
   {
     id: "smart-nest-plug",
@@ -81,7 +98,8 @@ const DEFAULT_PRODUCTS = [
     description: "Control lamps and appliances with a smart plug designed for easy home automation.",
     featured: false,
     active: true,
-    visualCode: "SH"
+    visualCode: "SH",
+    image: "assets/products/smart-plug.svg"
   },
   {
     id: "note-flow-tablet-stand",
@@ -93,7 +111,8 @@ const DEFAULT_PRODUCTS = [
     description: "Adjustable aluminium stand for tablets and phones during study and work.",
     featured: false,
     active: true,
-    visualCode: "WS"
+    visualCode: "WS",
+    image: "assets/products/tablet-stand.svg"
   }
 ];
 
@@ -102,9 +121,81 @@ const CHECKOUT_KEY = "snapshopCheckout";
 const ORDERS_KEY = "snapshopOrders";
 const POLL_KEY = "snapshopPollChoice";
 const AUTH_TOKEN_KEY = "snapshopAuthToken";
+const WISHLIST_KEY = "snapshopWishlist";
 const API_BASE = "/api";
 
 let productsCache = [...DEFAULT_PRODUCTS];
+
+/* --- Wishlist --- */
+function getWishlist() {
+  try { return JSON.parse(localStorage.getItem(WISHLIST_KEY)) || []; }
+  catch { return []; }
+}
+function saveWishlist(list) { localStorage.setItem(WISHLIST_KEY, JSON.stringify(list)); }
+function toggleWishlist(productId) {
+  const list = getWishlist();
+  const idx = list.indexOf(productId);
+  if (idx > -1) { list.splice(idx, 1); showToast("Removed from wishlist."); }
+  else { list.push(productId); showToast("Added to wishlist!"); }
+  saveWishlist(list);
+  document.querySelectorAll(`[data-wishlist-toggle="${productId}"]`).forEach(btn => {
+    btn.classList.toggle("is-active", list.includes(productId));
+    btn.innerHTML = list.includes(productId) ? "&#10084;" : "&#9825;";
+  });
+}
+function isWishlisted(productId) { return getWishlist().includes(productId); }
+
+/* --- Confirm Dialog --- */
+function confirmDialog(title, message) {
+  return new Promise(resolve => {
+    let overlay = document.getElementById("confirm-dialog");
+    if (!overlay) {
+      overlay = document.createElement("div");
+      overlay.id = "confirm-dialog";
+      overlay.className = "dialog-overlay";
+      overlay.innerHTML = `<div class="dialog-box">
+        <h3 class="dialog-title"></h3>
+        <p class="dialog-message"></p>
+        <div class="dialog-actions">
+          <button class="button button-secondary dialog-cancel" type="button">Cancel</button>
+          <button class="button button-danger dialog-confirm" type="button">Confirm</button>
+        </div>
+      </div>`;
+      document.body.appendChild(overlay);
+    }
+    overlay.querySelector(".dialog-title").textContent = title;
+    overlay.querySelector(".dialog-message").textContent = message;
+    overlay.classList.add("is-visible");
+
+    function cleanup(result) {
+      overlay.classList.remove("is-visible");
+      overlay.querySelector(".dialog-cancel").removeEventListener("click", onCancel);
+      overlay.querySelector(".dialog-confirm").removeEventListener("click", onConfirm);
+      resolve(result);
+    }
+    function onCancel() { cleanup(false); }
+    function onConfirm() { cleanup(true); }
+
+    overlay.querySelector(".dialog-cancel").addEventListener("click", onCancel);
+    overlay.querySelector(".dialog-confirm").addEventListener("click", onConfirm);
+  });
+}
+
+/* --- Product Image Helper --- */
+function getProductImage(product) {
+  const img = product.image || PRODUCT_IMAGES[product.id] || PRODUCT_IMAGES[product.slug];
+  if (img) return `<img src="${img}" alt="${product.name}" loading="lazy">`;
+  const code = product.visualCode || product.category.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  return `<div class="product-visual-code">${code}</div>`;
+}
+
+/* --- Loading Skeletons --- */
+function showSkeletons(container, count = 4) {
+  if (!container) return;
+  container.innerHTML = Array.from({ length: count },
+    () => `<div class="skeleton skeleton-card"></div>`
+  ).join("");
+}
 
 function getCart() {
   try {
@@ -247,29 +338,30 @@ function updateCartItem(productId, nextQuantity) {
 }
 
 function clearCart() {
-  saveCart([]);
-  localStorage.removeItem(CHECKOUT_KEY);
-  renderCartPage();
-  renderCheckoutPage();
-  renderPaymentPage();
+  confirmDialog("Clear Cart", "Remove all items from your cart?").then(confirmed => {
+    if (!confirmed) return;
+    saveCart([]);
+    localStorage.removeItem(CHECKOUT_KEY);
+    renderCartPage();
+    renderCheckoutPage();
+    renderPaymentPage();
+    showToast("Cart emptied.");
+  });
 }
 
 function createProductCard(product) {
-  const visualCode = product.visualCode || product.category
-    .split(" ")
-    .map((word) => word[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-
+  const wishActive = isWishlisted(product.id);
   return `
     <article class="card product-card">
-      <div class="product-visual" aria-hidden="true">${visualCode}</div>
+      <div class="product-visual" aria-hidden="true">${getProductImage(product)}</div>
       <span class="product-tag">${product.category}</span>
-      <h3>${product.name}</h3>
+      <h3><a href="product.html?id=${product.slug}">${product.name}</a></h3>
       <p>${product.description}</p>
       <div class="product-price">${formatCurrency(product.price)}</div>
-      <button class="button button-primary" type="button" data-add-to-cart="${product.id}">Add To Cart</button>
+      <div class="product-card-actions">
+        <button class="button button-primary" type="button" data-add-to-cart="${product.id}">Add To Cart</button>
+        <button class="wishlist-btn${wishActive ? " is-active" : ""}" type="button" data-wishlist-toggle="${product.id}" aria-label="Toggle wishlist">${wishActive ? "&#10084;" : "&#9825;"}</button>
+      </div>
     </article>
   `;
 }
@@ -280,10 +372,13 @@ function renderFeaturedProducts() {
     return;
   }
 
-  container.innerHTML = getProducts()
-    .filter((product) => product.featured)
-    .map(createProductCard)
-    .join("");
+  const featured = getProducts().filter((product) => product.featured);
+  if (featured.length === 0) {
+    showSkeletons(container, 4);
+    return;
+  }
+
+  container.innerHTML = featured.map(createProductCard).join("");
 }
 
 function renderCatalog() {
@@ -307,22 +402,62 @@ function renderCatalog() {
     ...Array.from(categoryMap.entries()).map(([slug, name]) => ({ slug, name }))
   ];
   let activeCategory = "all";
+  let currentSort = "default";
+
+  /* Build sort control if not present */
+  let sortSelect = document.getElementById("product-sort");
+  if (!sortSelect) {
+    const controlsDiv = document.createElement("div");
+    controlsDiv.className = "catalog-controls";
+    controlsDiv.innerHTML = `
+      <span class="product-count" id="product-count"></span>
+      <div class="sort-control">
+        <label for="product-sort">Sort by:</label>
+        <select id="product-sort">
+          <option value="default">Default</option>
+          <option value="price-low">Price: Low to High</option>
+          <option value="price-high">Price: High to Low</option>
+          <option value="name-az">Name: A-Z</option>
+          <option value="name-za">Name: Z-A</option>
+        </select>
+      </div>
+    `;
+    results.parentNode.insertBefore(controlsDiv, results);
+    sortSelect = document.getElementById("product-sort");
+  }
 
   filterContainer.innerHTML = categories.map((category) => `
     <button class="chip ${category.slug === "all" ? "is-active" : ""}" type="button" data-category-filter="${category.slug}">${category.name}</button>
   `).join("");
 
+  function sortProducts(products) {
+    const sorted = [...products];
+    switch (currentSort) {
+      case "price-low": return sorted.sort((a, b) => a.price - b.price);
+      case "price-high": return sorted.sort((a, b) => b.price - a.price);
+      case "name-az": return sorted.sort((a, b) => a.name.localeCompare(b.name));
+      case "name-za": return sorted.sort((a, b) => b.name.localeCompare(a.name));
+      default: return sorted;
+    }
+  }
+
   function paintProducts() {
     const searchValue = searchInput.value.trim().toLowerCase();
     const filteredProducts = getProducts().filter((product) => {
       const matchesCategory = activeCategory === "all" || product.categorySlug === activeCategory;
-      const matchesSearch = product.name.toLowerCase().includes(searchValue);
+      const matchesSearch = product.name.toLowerCase().includes(searchValue) ||
+                            product.description.toLowerCase().includes(searchValue);
       return product.active && matchesCategory && matchesSearch;
     });
 
-    results.innerHTML = filteredProducts.length > 0
-      ? filteredProducts.map(createProductCard).join("")
-      : `<article class="card empty-state">No products match your search right now.</article>`;
+    const sorted = sortProducts(filteredProducts);
+    const countEl = document.getElementById("product-count");
+    if (countEl) countEl.textContent = `${sorted.length} product${sorted.length !== 1 ? "s" : ""}`;
+
+    results.innerHTML = sorted.length > 0
+      ? sorted.map(createProductCard).join("")
+      : `<article class="card empty-state"><span class="empty-state-icon">🔍</span><h2>No products found</h2><p>Try a different search term or category.</p></article>`;
+  }
   }
 
   filterContainer.addEventListener("click", (event) => {
@@ -337,6 +472,9 @@ function renderCatalog() {
   });
 
   searchInput.addEventListener("input", paintProducts);
+  if (sortSelect) {
+    sortSelect.addEventListener("change", (e) => { currentSort = e.target.value; paintProducts(); });
+  }
   paintProducts();
 }
 
@@ -362,6 +500,7 @@ function renderCartPage() {
   if (totals.items.length === 0) {
     itemsContainer.innerHTML = `
       <div class="empty-state">
+        <span class="empty-state-icon">🛒</span>
         <h2>Your cart is empty.</h2>
         <p>Add products from the shop page to begin checkout.</p>
         <a class="button button-primary" href="shop.html">Browse Products</a>
@@ -373,20 +512,20 @@ function renderCartPage() {
 
   itemsContainer.innerHTML = totals.items.map((item) => `
     <article class="cart-item">
+      <div class="cart-item-image">${getProductImage(item)}</div>
       <div>
         <h3>${item.name}</h3>
-        <p>${item.description}</p>
         <div class="cart-item-actions">
           <span class="product-tag">${item.category}</span>
           <span>${formatCurrency(item.price)} each</span>
         </div>
       </div>
       <div class="quantity-control">
-        <button class="quantity-button" type="button" data-quantity-change="${item.id}" data-delta="-1" aria-label="Reduce quantity for ${item.name}">-</button>
+        <button class="quantity-button" type="button" data-quantity-change="${item.id}" data-delta="-1" aria-label="Reduce quantity for ${item.name}">−</button>
         <strong>${item.quantity}</strong>
         <button class="quantity-button" type="button" data-quantity-change="${item.id}" data-delta="1" aria-label="Increase quantity for ${item.name}">+</button>
         <strong>${formatCurrency(item.lineTotal)}</strong>
-        <button class="button button-secondary" type="button" data-remove-item="${item.id}">Remove</button>
+        <button class="button button-secondary button-small" type="button" data-remove-item="${item.id}">Remove</button>
       </div>
     </article>
   `).join("");
@@ -522,20 +661,15 @@ async function submitOrder() {
       })
     });
 
-    clearCart();
+    const orderRef = payload.orderNumber;
+    saveCart([]);
     localStorage.removeItem(CHECKOUT_KEY);
-    message.textContent = `Payment completed successfully. Order reference: ${payload.orderNumber}.`;
-    customerNode.textContent = "Thank you for shopping with SnapShop.";
-    summaryContainer.innerHTML = `<p class="info-panel">Your order has been confirmed and saved on the backend.</p>`;
-    showToast("Payment successful.");
+    window.location.href = `success.html?ref=${encodeURIComponent(orderRef)}`;
   } catch (error) {
     const fallbackOrderRef = persistFallbackOrder(draft, totals);
-    clearCart();
+    saveCart([]);
     localStorage.removeItem(CHECKOUT_KEY);
-    message.textContent = `Payment completed in demo mode. Order reference: ${fallbackOrderRef}.`;
-    customerNode.textContent = "Thank you for shopping with SnapShop.";
-    summaryContainer.innerHTML = `<p class="info-panel">The backend was unavailable, so the order was saved locally for demo purposes.</p>`;
-    showToast("Payment saved in demo mode.");
+    window.location.href = `success.html?ref=${encodeURIComponent(fallbackOrderRef)}&demo=1`;
   } finally {
     payButton.disabled = true;
   }
@@ -546,6 +680,12 @@ function bindGlobalEvents() {
     const addButton = event.target.closest("[data-add-to-cart]");
     if (addButton) {
       addToCart(addButton.dataset.addToCart);
+      return;
+    }
+
+    const wishButton = event.target.closest("[data-wishlist-toggle]");
+    if (wishButton) {
+      toggleWishlist(wishButton.dataset.wishlistToggle);
       return;
     }
 
@@ -600,10 +740,7 @@ function bindGlobalEvents() {
 
   const clearCartButton = document.getElementById("clear-cart");
   if (clearCartButton && clearCartButton.dataset.bound !== "true") {
-    clearCartButton.addEventListener("click", () => {
-      clearCart();
-      showToast("Cart emptied.");
-    });
+    clearCartButton.addEventListener("click", () => clearCart());
     clearCartButton.dataset.bound = "true";
   }
 
@@ -615,6 +752,26 @@ function bindGlobalEvents() {
       navToggle.setAttribute("aria-expanded", String(isOpen));
     });
     navToggle.dataset.bound = "true";
+  }
+
+  /* Back to top */
+  const btt = document.getElementById("back-to-top");
+  if (btt) {
+    window.addEventListener("scroll", () => {
+      btt.classList.toggle("is-visible", window.scrollY > 400);
+    }, { passive: true });
+    btt.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
+  }
+
+  /* Newsletter form */
+  const newsletterForm = document.getElementById("newsletter-form");
+  if (newsletterForm && newsletterForm.dataset.bound !== "true") {
+    newsletterForm.addEventListener("submit", (e) => {
+      e.preventDefault();
+      showToast("Thank you for subscribing!");
+      newsletterForm.reset();
+    });
+    newsletterForm.dataset.bound = "true";
   }
 
   const contactForm = document.getElementById("contact-form");
@@ -661,6 +818,86 @@ function setCurrentYear() {
   });
 }
 
+/* --- Product Detail Page --- */
+function renderProductDetail() {
+  const container = document.getElementById("product-detail");
+  if (!container) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const productId = params.get("id");
+  const product = findProduct(productId);
+
+  if (!product) {
+    container.innerHTML = `<div class="empty-state"><span class="empty-state-icon">🔍</span><h2>Product not found</h2><p>The product you're looking for doesn't exist.</p><a class="button button-primary" href="shop.html">Back to Shop</a></div>`;
+    return;
+  }
+
+  const wishActive = isWishlisted(product.id);
+  const related = getProducts().filter(p => p.categorySlug === product.categorySlug && p.id !== product.id).slice(0, 3);
+
+  container.innerHTML = `
+    <div class="product-detail-layout">
+      <div class="product-detail-image">${getProductImage(product)}</div>
+      <div class="product-detail-info">
+        <nav class="breadcrumb"><a href="index.html">Home</a> <span>/</span> <a href="shop.html">Shop</a> <span>/</span> <span aria-current="page">${product.name}</span></nav>
+        <h1>${product.name}</h1>
+        <div class="product-detail-meta">
+          <span class="product-tag">${product.category}</span>
+          <span class="stock-badge in-stock">In Stock</span>
+        </div>
+        <div class="product-detail-price">${formatCurrency(product.price)}</div>
+        <p>${product.description}</p>
+        <ul class="product-features">
+          <li>Free delivery above UGX 200,000</li>
+          <li>30-day return policy</li>
+          <li>Genuine product guarantee</li>
+          <li>Kampala same-day delivery</li>
+        </ul>
+        <div class="product-detail-actions">
+          <button class="button button-primary" type="button" data-add-to-cart="${product.id}">Add To Cart</button>
+          <button class="wishlist-btn${wishActive ? " is-active" : ""}" type="button" data-wishlist-toggle="${product.id}" aria-label="Toggle wishlist">${wishActive ? "&#10084;" : "&#9825;"}</button>
+        </div>
+      </div>
+    </div>
+    ${related.length > 0 ? `
+      <section class="section" style="margin-top:2rem;">
+        <div class="section-heading"><p class="eyebrow">You might also like</p><h2>Related Products</h2></div>
+        <div class="product-grid">${related.map(createProductCard).join("")}</div>
+      </section>
+    ` : ""}
+  `;
+
+  document.title = `${product.name} — SnapShop`;
+}
+
+/* --- Success Page --- */
+function renderSuccessPage() {
+  const container = document.getElementById("success-content");
+  if (!container) return;
+
+  const params = new URLSearchParams(window.location.search);
+  const ref = params.get("ref") || "N/A";
+  const isDemo = params.get("demo") === "1";
+
+  container.innerHTML = `
+    <div class="success-container">
+      <div class="success-icon">&#10003;</div>
+      <h1 style="font-family:Georgia,serif;margin:0 0 0.5rem;">Order Confirmed!</h1>
+      <p style="color:var(--muted);margin:0 0 1.5rem;">Thank you for shopping with SnapShop. Your order has been placed successfully.</p>
+      <div class="success-details">
+        <div class="summary-line"><span>Order Reference</span><strong>${ref}</strong></div>
+        <div class="summary-line"><span>Status</span><strong>${isDemo ? "Demo Order" : "Confirmed"}</strong></div>
+        <div class="summary-line"><span>Date</span><strong>${new Date().toLocaleDateString("en-UG", { year: "numeric", month: "long", day: "numeric" })}</strong></div>
+      </div>
+      ${isDemo ? '<p style="color:var(--muted);font-size:0.9rem;">This order was saved locally because the backend was unavailable.</p>' : ""}
+      <div style="display:flex;gap:0.6rem;justify-content:center;flex-wrap:wrap;margin-top:1rem;">
+        <a class="button button-primary" href="shop.html">Continue Shopping</a>
+        <a class="button button-secondary" href="dashboard.html">View Dashboard</a>
+      </div>
+    </div>
+  `;
+}
+
 async function bootstrap() {
   await loadProducts();
   setCurrentYear();
@@ -672,6 +909,8 @@ async function bootstrap() {
   renderCartPage();
   renderCheckoutPage();
   renderPaymentPage();
+  renderProductDetail();
+  renderSuccessPage();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -685,5 +924,7 @@ document.addEventListener("DOMContentLoaded", () => {
     renderCartPage();
     renderCheckoutPage();
     renderPaymentPage();
+    renderProductDetail();
+    renderSuccessPage();
   });
 });

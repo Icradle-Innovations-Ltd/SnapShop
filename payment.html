@@ -44,6 +44,13 @@
         <p>This page provides the required pay link and final confirmation process.</p>
       </section>
 
+      <div class="checkout-progress">
+        <div class="checkout-step is-done"><span>Cart</span></div>
+        <div class="checkout-step is-done"><span>Details</span></div>
+        <div class="checkout-step is-active"><span>Payment</span></div>
+        <div class="checkout-step"><span>Done</span></div>
+      </div>
+
       <section class="checkout-layout">
         <article class="card">
           <h2>Pay Securely</h2>
@@ -65,26 +72,59 @@
     </div>
   </main>
 
-  <footer class="site-footer">
+    <footer class="site-footer">
+    <div class="container">
+      <div class="newsletter-section">
+        <h2>Stay in the loop</h2>
+        <p>Get updates on new arrivals, deals, and creator tips.</p>
+        <form class="newsletter-form" id="newsletter-form">
+          <input type="email" placeholder="you@example.com" required>
+          <button type="submit">Subscribe</button>
+        </form>
+      </div>
+    </div>
     <div class="container footer-grid">
       <div>
         <h2>SnapShop</h2>
-        <p>Visible, guided, and easy payment flow.</p>
+        <p>Electronic commerce made practical for creators, learners, and professionals in Uganda.</p>
+        <div class="footer-social">
+          <a href="#" aria-label="Twitter">X</a>
+          <a href="#" aria-label="Instagram">IG</a>
+          <a href="#" aria-label="Facebook">FB</a>
+        </div>
       </div>
       <div>
-        <h3>Need to edit?</h3>
-        <p><a href="checkout.html">Return to checkout</a></p>
+        <h3>Visit</h3>
+        <p>Plot 14, Yusuf Lule Road, Kampala</p>
+        <p>+256 704 555 120</p>
+        <p>hello@snapshop.ug</p>
       </div>
       <div>
-        <h3>Contact</h3>
-        <p><a href="contact.html">Get support</a></p>
+        <h3>Explore</h3>
+        <p><a href="shop.html">Products</a></p>
+        <p><a href="faq.html">FAQ</a></p>
+        <p><a href="sitemap.html">Sitemap</a></p>
+      </div>
+      <div>
+        <h3>Account</h3>
+        <p><a href="login.html">Sign In</a></p>
+        <p><a href="register.html">Create Account</a></p>
+        <p><a href="dashboard.html">Dashboard</a></p>
       </div>
     </div>
     <div class="container footer-bottom">
-      <p>&copy; <span class="current-year"></span> SnapShop.</p>
+      <p>&copy; <span class="current-year"></span> SnapShop. Built for Electronic Commerce Technologies.</p>
+      <div class="footer-bottom-links">
+        <a href="sitemap.html">Sitemap</a>
+        <a href="faq.html">FAQ</a>
+        <a href="contact.html">Support</a>
+      </div>
     </div>
   </footer>
 
+  <button id="back-to-top" class="back-to-top" aria-label="Back to top">&uarr;</button>
+  <div id="status-toast" class="status-toast" aria-live="polite" aria-atomic="true"></div>
   <script src="script.js"></script>
+  <script src="auth-ui.js"></script>
 </body>
 </html>

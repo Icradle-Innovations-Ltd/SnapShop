@@ -1,6 +1,7 @@
 const express = require("express");
 const { listPendingVendors, approveVendor } = require("../services/storeService");
 const { requireAuth, requireRole } = require("../middleware/auth");
+const { prisma, hasDatabase } = require("../lib/prisma");
 
 const router = express.Router();
 
@@ -22,6 +23,41 @@ router.patch("/vendors/:vendorProfileId/approve", async (req, res, next) => {
       message: "Vendor approved successfully.",
       vendor
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/orders", async (req, res, next) => {
+  try {
+    if (!hasDatabase) {
+      return res.json({ orders: [] });
+    }
+    const orders = await prisma.order.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: { customer: { include: { user: true } } }
+    });
+    res.json({
+      orders: orders.map((o) => ({
+        ...o,
+        customer: o.customer?.user ? { name: o.customer.user.name, email: o.customer.user.email } : null
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/users", async (req, res, next) => {
+  try {
+    if (!hasDatabase) {
+      return res.json({ users: [] });
+    }
+    const users = await prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true, createdAt: true }
+    });
+    res.json({ users });
   } catch (error) {
     next(error);
   }

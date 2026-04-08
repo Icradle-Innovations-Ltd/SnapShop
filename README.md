@@ -1,109 +1,146 @@
 # SnapShop
 
-SnapShop is a full-stack e-commerce marketplace project built for the CIT 7201 / IT 501 Electronic Commerce Technologies project. It now runs as a single Express application that serves the storefront and exposes a backend API backed by Prisma and PostgreSQL.
+SnapShop is a full-stack e-commerce marketplace built for the CIT 7201 / IT 501 Electronic Commerce Technologies project. It runs as a single Express application that serves the storefront and exposes a backend API backed by Prisma and PostgreSQL, with Pesapal payment integration and Cloudinary image hosting.
+
+**Live site:** <https://snapshop.divinefishers.com/>
 
 ## Stack
 
-- Express.js for the web server and API
-- Prisma ORM for database access
-- PostgreSQL as the production database
-- Static HTML, CSS, and browser JavaScript for the storefront
-- Railway for hosting the web service and database
+- **Backend:** Express.js, Prisma ORM, PostgreSQL
+- **Frontend:** Static HTML, CSS, Vanilla JavaScript
+- **Payments:** Pesapal API 3.0 (Mobile Money & Card)
+- **Image Storage:** Cloudinary (persistent cloud hosting)
+- **Hosting:** Railway (web service + database)
 
 ## Features
 
-- Responsive storefront pages for home, shop, about, FAQ, contact, cart, checkout, payment, and sitemap
+- Responsive storefront with home, shop, product detail, cart, checkout, payment, about, FAQ, contact, and sitemap pages
 - Backend API for products, categories, contact messages, poll votes, and orders
-- JWT authentication with role-based access for admins, vendors, and customers
-- Vendor onboarding, store creation, and vendor-managed product listings
-- Customer address management and customer order history
-- Admin approval workflow for pending vendors
-- Prisma schema for products, categories, orders, order items, poll votes, and contact messages
-- Prisma schema for users, vendor profiles, customer profiles, stores, addresses, and order status history
-- Seed script to preload the initial SnapShop catalogue
-- Frontend integration that fetches products from the API and submits customer actions to the backend
-- Memory fallback mode when the database is not connected yet
+- JWT authentication with role-based access (Admin, Vendor, Customer)
+- **Vendor dashboard** — store creation, product CRUD, multi-image upload via Cloudinary, order management
+- **Customer dashboard** — order history, address management, server-side cart persistence
+- **Admin dashboard** — vendor approval, user management, product oversight, order & payment tracking
+- **Pesapal 3.0 integration** — mobile money & card payments with IPN callback support
+- **Cloudinary integration** — persistent product image storage that survives Railway redeploys
+- Cart merge on login/register (local cart syncs with server)
+- Category navigation from homepage to filtered shop view
+- Wishlist functionality
+- Memory fallback mode when the database is not connected
 
 ## Project Structure
 
-- `src/server.js` - server entry point
-- `src/app.js` - Express app and static page routing
-- `src/routes/api.js` - public catalogue, contact, poll, and order endpoints
-- `src/routes/auth.js` - JWT login, registration, and current-user routes
-- `src/routes/vendor.js` - vendor store and product management routes
-- `src/routes/customer.js` - customer address and order routes
-- `src/routes/admin.js` - admin approval routes
-- `src/services/storeService.js` - marketplace, auth, product, and order logic
-- `src/data/catalog.js` - shared catalogue seed data
-- `prisma/schema.prisma` - Prisma data model
-- `prisma/seed.js` - database seed script
-- `script.js` - frontend logic connected to the API
-- `project-report.md` - written answers for Questions 1 and 2
+```
+├── index.html, shop.html, cart.html, ...   # Storefront pages
+├── script.js                                # Frontend logic
+├── auth-ui.js                               # Auth & dashboard rendering
+├── styles.css                               # Design system
+├── assets/                                  # Static assets & placeholders
+├── src/
+│   ├── server.js                            # Server entry point
+│   ├── app.js                               # Express app & static routing
+│   ├── routes/
+│   │   ├── api.js                           # Public catalogue, contact, poll endpoints
+│   │   ├── auth.js                          # JWT login, register, current-user
+│   │   ├── vendor.js                        # Vendor store & product management
+│   │   ├── customer.js                      # Customer cart, addresses, orders
+│   │   └── admin.js                         # Admin approval & management
+│   ├── services/
+│   │   └── storeService.js                  # Core business logic
+│   ├── lib/
+│   │   ├── prisma.js                        # Prisma client
+│   │   └── cloudinary.js                    # Cloudinary upload/delete
+│   ├── data/catalog.js                      # Seed catalogue data
+│   ├── store/memoryStore.js                 # In-memory fallback store
+│   ├── middleware/auth.js                   # JWT auth middleware
+│   └── utils/                              # Auth, orders, slug, validation helpers
+├── prisma/
+│   ├── schema.prisma                        # Data model
+│   ├── seed.js                              # Database seed script
+│   └── migrations/                          # Migration history
+└── project-report.md                        # Written answers (Q1 & Q2)
+```
 
 ## Local Setup
 
 1. Copy `.env.example` to `.env`.
 2. Set `DATABASE_URL` to your PostgreSQL connection string.
 3. Set `JWT_SECRET` to a strong secret value.
-   If you are connecting from your local machine to Railway Postgres, set `DATABASE_PUBLIC_URL` to the Railway TCP proxy connection string and let the helper scripts use that automatically.
-4. Install dependencies:
+4. Set up **Pesapal** credentials (sandbox or production):
+   - `PESAPAL_CONSUMER_KEY`
+   - `PESAPAL_CONSUMER_SECRET`
+   - `PESAPAL_API_URL`
+5. Set up **Cloudinary** credentials (free tier at [cloudinary.com](https://cloudinary.com)):
+   - `CLOUDINARY_CLOUD_NAME`
+   - `CLOUDINARY_API_KEY`
+   - `CLOUDINARY_API_SECRET`
+6. Install dependencies:
 
-   ```powershell
-   & "C:\Program Files\nodejs\npm.cmd" install
+   ```bash
+   npm install
    ```
 
-5. Generate Prisma Client:
+7. Generate Prisma Client:
 
-   ```powershell
-   & "C:\Program Files\nodejs\npm.cmd" run prisma:generate
+   ```bash
+   npm run prisma:generate
    ```
 
-6. Run migrations and seed the database:
+8. Run migrations and seed the database:
 
-   ```powershell
-   & "C:\Program Files\nodejs\npm.cmd" run db:migrate
-   & "C:\Program Files\nodejs\npm.cmd" run db:seed
+   ```bash
+   npm run db:migrate
+   npm run db:seed
    ```
 
-7. Start the app:
+9. Start the app:
 
-   ```powershell
-   & "C:\Program Files\nodejs\npm.cmd" run dev
+   ```bash
+   npm run dev
    ```
 
-## Railway Deployment Notes
+   The app runs at `http://localhost:3000`.
 
-- Create a PostgreSQL database service in Railway.
-- Add the database connection string to the web service as `DATABASE_URL`.
-- Add a secure `JWT_SECRET` environment variable to the web service.
-- Railway can start the app with the `npm start` script from `package.json`.
-- Before the app serves live traffic, run Prisma migrations with `npm run db:deploy`.
-- Seed the initial catalogue once with `npm run db:seed`.
-- From your local machine, use the public Railway proxy URL as `DATABASE_PUBLIC_URL`. Inside Railway itself, keep using the private `DATABASE_URL`.
+## Railway Deployment
+
+1. Create a PostgreSQL database service in Railway.
+2. Add the following environment variables to the web service:
+   - `DATABASE_URL` — private Railway Postgres connection string
+   - `JWT_SECRET` — a strong secret value
+   - `PESAPAL_CONSUMER_KEY`, `PESAPAL_CONSUMER_SECRET`, `PESAPAL_API_URL`
+   - `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`
+3. Railway starts the app with `npm start`.
+4. Run Prisma migrations: `npm run db:deploy`.
+5. Seed the catalogue: `npm run db:seed`.
+6. From your local machine, use the public Railway proxy URL as `DATABASE_PUBLIC_URL`.
 
 ## Demo Accounts
 
-The seed script creates demo users for quick testing:
+The seed script creates demo users for testing:
 
-- Admin: `admin@snapshop.ug` / `Admin123!`
-- Vendor: `vendor@snapshop.ug` / `Vendor123!`
-- Customer: `customer@snapshop.ug` / `Customer123!`
+| Role     | Email                  | Password       |
+|----------|------------------------|----------------|
+| Admin    | admin@snapshop.ug      | Admin123!      |
+| Vendor   | vendor@snapshop.ug     | Vendor123!     |
+| Customer | customer@snapshop.ug   | Customer123!   |
 
-## Current Marketplace Phase
+## Environment Variables
 
-Phase 1 currently includes:
+| Variable                  | Required | Description                              |
+|---------------------------|----------|------------------------------------------|
+| `PORT`                    | No       | Server port (default: 3000)              |
+| `NODE_ENV`                | No       | `development` or `production`            |
+| `DATABASE_URL`            | Yes      | PostgreSQL connection string             |
+| `DATABASE_PUBLIC_URL`     | No       | Public Railway proxy URL (local dev)     |
+| `JWT_SECRET`              | Yes      | Secret for signing JWTs                  |
+| `PESAPAL_CONSUMER_KEY`    | Yes      | Pesapal API consumer key                 |
+| `PESAPAL_CONSUMER_SECRET` | Yes      | Pesapal API consumer secret              |
+| `PESAPAL_API_URL`         | Yes      | Pesapal API base URL                     |
+| `CLOUDINARY_CLOUD_NAME`   | No*      | Cloudinary cloud name                    |
+| `CLOUDINARY_API_KEY`      | No*      | Cloudinary API key                       |
+| `CLOUDINARY_API_SECRET`   | No*      | Cloudinary API secret                    |
 
-- JWT authentication and role-based route protection
-- customer and vendor registration
-- admin approval of pending vendors
-- vendor store creation
-- vendor product listing management
-- customer address management
-- customer order history and order tracking
+\* Cloudinary is optional — without it, images are stored on local disk (lost on Railway redeploy).
 
-Later phases can add pickup agents, account managers, vendor payouts, and delivery assignment flows.
+## License
 
-## Submission Assets
-
-- `project-report.md` contains the written business answers.
-- The website frontend is served by Express and can be deployed together with the backend on Railway.
+This project was created for academic purposes (CIT 7201 / IT 501).

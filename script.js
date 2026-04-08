@@ -510,6 +510,13 @@ function renderCatalog() {
     ...Array.from(categoryMap.entries()).map(([slug, name]) => ({ slug, name }))
   ];
   let activeCategory = "all";
+
+  /* Read category from URL query param */
+  const urlCategory = new URLSearchParams(window.location.search).get("category");
+  if (urlCategory && categories.some(c => c.slug === urlCategory)) {
+    activeCategory = urlCategory;
+  }
+
   let currentSort = "default";
 
   /* Build sort control if not present */
@@ -535,7 +542,7 @@ function renderCatalog() {
   }
 
   filterContainer.innerHTML = categories.map((category) => `
-    <button class="chip ${category.slug === "all" ? "is-active" : ""}" type="button" data-category-filter="${category.slug}">${category.name}</button>
+    <button class="chip ${category.slug === activeCategory ? "is-active" : ""}" type="button" data-category-filter="${category.slug}">${category.name}</button>
   `).join("");
 
   function sortProducts(products) {

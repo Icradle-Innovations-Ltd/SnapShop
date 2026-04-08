@@ -306,6 +306,7 @@ button, input, select, textarea { font: inherit; }
 .content-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
 
 /* Category Cards */
+a.category-card { text-decoration: none; color: inherit; }
 .category-card {
   min-height: 190px; cursor: pointer; position: relative; overflow: hidden;
   background: linear-gradient(180deg, rgba(217, 119, 6, 0.05), rgba(24, 78, 58, 0.04)), var(--surface);

@@ -319,7 +319,13 @@ function showToast(message) {
 function updateCartIndicators() {
   const totalItems = getCart().reduce((sum, item) => sum + item.quantity, 0);
   document.querySelectorAll(".cart-count").forEach((node) => {
+    const prev = Number(node.textContent) || 0;
     node.textContent = String(totalItems);
+    if (totalItems !== prev) {
+      node.classList.remove("is-bumped");
+      void node.offsetWidth;
+      node.classList.add("is-bumped");
+    }
   });
 }
 
@@ -1069,6 +1075,25 @@ async function bootstrap() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  /* Scroll-reveal observer */
+  if ("IntersectionObserver" in window) {
+    const revealObs = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-visible");
+          revealObs.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
+    document.querySelectorAll(".reveal").forEach((el) => revealObs.observe(el));
+  } else {
+    document.querySelectorAll(".reveal").forEach((el) => el.classList.add("is-visible"));
+  }
+
+  /* Remove page loading bar after animation */
+  const loadBar = document.querySelector(".page-loading-bar");
+  if (loadBar) setTimeout(() => loadBar.remove(), 900);
+
   bootstrap().catch(() => {
     setCurrentYear();
     updateCartIndicators();

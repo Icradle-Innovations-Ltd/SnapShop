@@ -16,7 +16,7 @@
         <img src="assets/logo.svg" alt="SnapShop logo">
         <span>SnapShop</span>
       </a>
-      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle navigation"><span class="nav-toggle-bar"></span><span class="nav-toggle-bar"></span><span class="nav-toggle-bar"></span></button>
       <nav id="site-nav" class="site-nav" aria-label="Main navigation">
         <a href="index.html" aria-current="page">Home</a>
         <a href="shop.html">Shop</a>
@@ -28,6 +28,7 @@
     </div>
   </header>
 
+  <div class="page-loading-bar" aria-hidden="true"></div>
   <main id="main-content">
     <section class="hero">
       <div class="container hero-grid">
@@ -62,23 +63,28 @@
           <h2>Categories designed around real customer tasks</h2>
         </div>
         <div class="category-grid">
-          <article class="card category-card">
+          <article class="card category-card reveal">
+            <span class="category-icon" aria-hidden="true">🎥</span>
             <h3>Creator Gear</h3>
             <p>Lighting, tripods, and webcams for classes, meetings, and online content.</p>
           </article>
-          <article class="card category-card">
+          <article class="card category-card reveal">
+            <span class="category-icon" aria-hidden="true">🎧</span>
             <h3>Audio</h3>
             <p>Wireless earbuds and speakers for clear sound on the move.</p>
           </article>
-          <article class="card category-card">
+          <article class="card category-card reveal">
+            <span class="category-icon" aria-hidden="true">🔋</span>
             <h3>Power</h3>
             <p>Power banks and charging tools that reduce downtime.</p>
           </article>
-          <article class="card category-card">
+          <article class="card category-card reveal">
+            <span class="category-icon" aria-hidden="true">🖥️</span>
             <h3>Workspace</h3>
             <p>Desk accessories that make study and work sessions more comfortable.</p>
           </article>
-          <article class="card category-card">
+          <article class="card category-card reveal">
+            <span class="category-icon" aria-hidden="true">🏠</span>
             <h3>Smart Home</h3>
             <p>Simple connected devices that save time and improve control.</p>
           </article>
@@ -103,17 +109,20 @@
           <h2>What our customers say</h2>
         </div>
         <div class="testimonial-grid">
-          <article class="card testimonial-card">
+          <article class="card testimonial-card reveal">
+            <div class="testimonial-avatar" aria-hidden="true">AN</div>
             <div class="testimonial-stars" aria-label="5 out of 5 stars">★★★★★</div>
             <blockquote>"SnapShop delivered my wireless earbuds within two days. The checkout was smooth and I paid easily with MTN Mobile Money. Highly recommend!"</blockquote>
             <p class="testimonial-author">— Aisha Nakamya, <span>Kampala</span></p>
           </article>
-          <article class="card testimonial-card">
+          <article class="card testimonial-card reveal">
+            <div class="testimonial-avatar" aria-hidden="true">BO</div>
             <div class="testimonial-stars" aria-label="5 out of 5 stars">★★★★★</div>
             <blockquote>"As a vendor, listing my phone accessories on SnapShop was straightforward. My sales doubled in the first month thanks to the clean product pages."</blockquote>
             <p class="testimonial-author">— Brian Ochieng, <span>Vendor</span></p>
           </article>
-          <article class="card testimonial-card">
+          <article class="card testimonial-card reveal">
+            <div class="testimonial-avatar" aria-hidden="true">GA</div>
             <div class="testimonial-stars" aria-label="4 out of 5 stars">★★★★☆</div>
             <blockquote>"Great selection of smart-home gadgets at fair prices. The FAQ page answered all my questions before I even had to contact support."</blockquote>
             <p class="testimonial-author">— Grace Atuhaire, <span>Entebbe</span></p>
@@ -124,7 +133,7 @@
 
     <section class="section">
       <div class="container promo-grid">
-        <article class="card promise-card">
+        <article class="card promise-card reveal reveal-left">
           <h2>Why customers trust SnapShop</h2>
           <ul class="check-list">
             <li>Clear product descriptions and visible prices</li>
@@ -133,7 +142,7 @@
             <li>Responsive design for phones, tablets, and desktops</li>
           </ul>
         </article>
-        <article class="card poll-card">
+        <article class="card poll-card reveal reveal-right">
           <p class="eyebrow">Interactive Poll</p>
           <h2>What should we launch next?</h2>
           <p>Cast one quick vote and help shape our next product line.</p>

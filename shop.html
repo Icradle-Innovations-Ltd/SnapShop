@@ -16,7 +16,7 @@
         <img src="assets/logo.svg" alt="SnapShop logo">
         <span>SnapShop</span>
       </a>
-      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">Menu</button>
+      <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" aria-label="Toggle navigation"><span class="nav-toggle-bar"></span><span class="nav-toggle-bar"></span><span class="nav-toggle-bar"></span></button>
       <nav id="site-nav" class="site-nav" aria-label="Main navigation">
         <a href="index.html">Home</a>
         <a href="shop.html" aria-current="page">Shop</a>
@@ -28,11 +28,12 @@
     </div>
   </header>
 
+  <div class="page-loading-bar" aria-hidden="true"></div>
   <main id="main-content" class="page-shell">
     <div class="container">
       <nav class="breadcrumb" aria-label="Breadcrumb">
         <a href="index.html">Home</a>
-        <span>/</span>
+        <span class="breadcrumb-sep" aria-hidden="true">›</span>
         <span aria-current="page">Shop</span>
       </nav>
       <section class="page-hero compact">
@@ -44,7 +45,10 @@
       <section class="catalog-toolbar card">
         <label class="toolbar-field">
           <span>Search products</span>
-          <input id="product-search" type="search" placeholder="Search by product name">
+          <div class="search-field-wrap">
+            <input id="product-search" type="search" placeholder="Search by product name">
+            <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
         </label>
         <div id="category-filters" class="chip-row" aria-label="Product categories"></div>
       </section>

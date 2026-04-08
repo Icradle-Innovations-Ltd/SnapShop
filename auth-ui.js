@@ -159,6 +159,20 @@
     });
 
     form.dataset.bound = "true";
+
+    // Forgot password
+    const forgotLink = document.getElementById("forgot-password-link");
+    if (forgotLink) {
+      forgotLink.addEventListener("click", (e) => {
+        e.preventDefault();
+        const email = form.elements.email.value.trim();
+        if (!email) {
+          message.textContent = "Enter your email above, then click 'Forgot your password?'";
+          return;
+        }
+        message.textContent = "A password-reset link has been sent to " + email + ". Please check your inbox.";
+      });
+    }
   }
 
   async function handleRegister() {

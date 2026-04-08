@@ -183,6 +183,7 @@ function confirmDialog(title, message) {
 
 /* --- Product Image Helper --- */
 function getProductImage(product) {
+  if (product.imageUrl) return `<img src="${product.imageUrl}" alt="${product.name}" loading="lazy">`;
   const img = product.image || PRODUCT_IMAGES[product.id] || PRODUCT_IMAGES[product.slug];
   if (img) return `<img src="${img}" alt="${product.name}" loading="lazy">`;
   const code = product.visualCode || product.category.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
@@ -589,6 +590,43 @@ function renderCheckoutPage() {
   });
 
   form.dataset.bound = "true";
+
+  /* Load saved addresses for logged-in customers */
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  if (token) {
+    apiRequest("/auth/me").then((data) => {
+      const addresses = data.user?.customerProfile?.addresses || [];
+      const section = document.getElementById("saved-addresses-section");
+      const select = document.getElementById("saved-address-select");
+      if (addresses.length && section && select) {
+        addresses.forEach((a) => {
+          const opt = document.createElement("option");
+          opt.value = JSON.stringify(a);
+          opt.textContent = `${a.label} — ${a.addressLine}, ${a.city}${a.isDefault ? " (Default)" : ""}`;
+          select.appendChild(opt);
+        });
+        section.style.display = "";
+        select.addEventListener("change", () => {
+          if (!select.value) return;
+          try {
+            const addr = JSON.parse(select.value);
+            if (form.elements.fullName && !form.elements.fullName.value) form.elements.fullName.value = data.user.name || "";
+            if (form.elements.email && !form.elements.email.value) form.elements.email.value = data.user.email || "";
+            if (form.elements.phone) form.elements.phone.value = data.user.customerProfile?.phone || "";
+            if (form.elements.city) form.elements.city.value = addr.city;
+            if (form.elements.address) form.elements.address.value = addr.addressLine;
+          } catch {}
+        });
+
+        /* Auto-select default address */
+        const defaultAddr = addresses.find((a) => a.isDefault);
+        if (defaultAddr && !existingDraft) {
+          select.value = JSON.stringify(defaultAddr);
+          select.dispatchEvent(new Event("change"));
+        }
+      }
+    }).catch(() => {});
+  }
 }
 
 function renderPaymentPage() {
@@ -920,7 +958,7 @@ function renderProductDetail() {
         <h1>${product.name}</h1>
         <div class="product-detail-meta">
           <span class="product-tag">${product.category}</span>
-          <span class="stock-badge in-stock">In Stock</span>
+          <span class="stock-badge ${product.stockQuantity > 0 ? "in-stock" : "out-of-stock"}">${product.stockQuantity > 0 ? `In Stock (${product.stockQuantity})` : "Out of Stock"}</span>
         </div>
         <div class="product-detail-price">${formatCurrency(product.price)}</div>
         <p>${product.description}</p>

@@ -36,7 +36,8 @@ function serializeProduct(product) {
     featured: Boolean(product.featured),
     active: product.active !== false,
     status: product.status,
-    visualCode: product.visualCode
+    visualCode: product.visualCode,
+    imageUrl: product.imageUrl || null
   };
 }
 
@@ -607,6 +608,7 @@ async function createVendorProduct(userId, payload) {
       active: true,
       status: payload.status || "DRAFT",
       visualCode: payload.visualCode?.trim() || categoryRecord.name.slice(0, 2).toUpperCase(),
+      imageUrl: payload.imageUrl?.trim() || null,
       categoryId: categoryRecord.slug,
       categoryName: categoryRecord.name,
       categorySlug: categoryRecord.slug,
@@ -641,6 +643,7 @@ async function createVendorProduct(userId, payload) {
       active: true,
       status: payload.status || "DRAFT",
       visualCode: payload.visualCode?.trim() || category.name.slice(0, 2).toUpperCase(),
+      imageUrl: payload.imageUrl?.trim() || null,
       categoryId: category.id,
       storeId: vendorProfile.store.id,
       createdById: userId
@@ -674,6 +677,7 @@ async function updateVendorProduct(userId, productId, payload) {
       ...(payload.stockQuantity !== undefined ? { stockQuantity: Number(payload.stockQuantity) } : {}),
       ...(payload.featured !== undefined ? { featured: Boolean(payload.featured) } : {}),
       ...(payload.status ? { status: payload.status } : {}),
+      ...(payload.imageUrl !== undefined ? { imageUrl: payload.imageUrl?.trim() || null } : {}),
       updatedAt: new Date().toISOString()
     });
     return serializeProduct(product);
@@ -703,7 +707,8 @@ async function updateVendorProduct(userId, productId, payload) {
       ...(payload.price !== undefined ? { price: Number(payload.price) } : {}),
       ...(payload.stockQuantity !== undefined ? { stockQuantity: Number(payload.stockQuantity) } : {}),
       ...(payload.featured !== undefined ? { featured: Boolean(payload.featured) } : {}),
-      ...(payload.status ? { status: payload.status } : {})
+      ...(payload.status ? { status: payload.status } : {}),
+      ...(payload.imageUrl !== undefined ? { imageUrl: payload.imageUrl?.trim() || null } : {})
     },
     include: {
       category: true,
@@ -712,6 +717,56 @@ async function updateVendorProduct(userId, productId, payload) {
   });
 
   return serializeProduct(updated);
+}
+
+async function deleteVendorProduct(userId, productId) {
+  const vendorProfile = await getVendorProfileByUser(userId);
+  if (!vendorProfile?.store) {
+    throw new Error("Vendor store not found.");
+  }
+
+  if (!hasDatabase) {
+    const idx = memoryStore.products.findIndex((p) => p.id === productId && p.storeId === vendorProfile.store.id);
+    if (idx === -1) {
+      throw new Error("Product not found in vendor store.");
+    }
+    memoryStore.products.splice(idx, 1);
+    return { message: "Product deleted." };
+  }
+
+  const existing = await prisma.product.findFirst({
+    where: { id: productId, storeId: vendorProfile.store.id }
+  });
+  if (!existing) {
+    throw new Error("Product not found in vendor store.");
+  }
+
+  await prisma.product.delete({ where: { id: productId } });
+  return { message: "Product deleted." };
+}
+
+async function updateVendorStore(userId, payload) {
+  const vendorProfile = await getVendorProfileByUser(userId);
+  if (!vendorProfile?.store) {
+    throw new Error("Vendor store not found.");
+  }
+
+  if (!hasDatabase) {
+    const store = memoryStore.stores.find((s) => s.id === vendorProfile.store.id);
+    if (!store) throw new Error("Store not found.");
+    if (payload.name) { store.name = payload.name.trim(); store.slug = slugify(payload.name) || store.slug; }
+    if (payload.description) store.description = payload.description.trim();
+    store.updatedAt = new Date().toISOString();
+    return store;
+  }
+
+  return prisma.store.update({
+    where: { id: vendorProfile.store.id },
+    data: {
+      ...(payload.name ? { name: payload.name.trim(), slug: slugify(payload.name) } : {}),
+      ...(payload.description ? { description: payload.description.trim() } : {})
+    }
+  });
 }
 
 async function addCustomerAddress(userId, payload) {
@@ -795,6 +850,16 @@ async function createOrder(payload, authUser = null) {
     throw new Error("This checkout supports one store per order.");
   }
 
+  /* Validate stock availability */
+  for (const item of orderItems) {
+    const product = !hasDatabase
+      ? memoryStore.products.find((p) => p.id === item.productId)
+      : await prisma.product.findUnique({ where: { id: item.productId } });
+    if (product && product.stockQuantity < item.quantity) {
+      throw new Error(`Insufficient stock for "${item.productName}". Available: ${product.stockQuantity}.`);
+    }
+  }
+
   const totals = calculateCartTotals(orderItems);
   const orderNumber = createOrderNumber();
   const customerProfileId = authUser?.role === "CUSTOMER" && authUser.customerProfile ? authUser.customerProfile.id : null;
@@ -816,6 +881,14 @@ async function createOrder(payload, authUser = null) {
   };
 
   if (!hasDatabase) {
+    /* Decrement stock in memory store */
+    for (const item of orderItems) {
+      const product = memoryStore.products.find((p) => p.id === item.productId);
+      if (product) {
+        product.stockQuantity = Math.max(0, product.stockQuantity - item.quantity);
+      }
+    }
+
     const record = {
       id: `order-${memoryStore.orders.length + 1}`,
       createdAt: new Date().toISOString(),
@@ -831,6 +904,14 @@ async function createOrder(payload, authUser = null) {
       createdAt: new Date().toISOString()
     });
     return record;
+  }
+
+  /* Decrement stock in database */
+  for (const item of orderItems) {
+    await prisma.product.update({
+      where: { id: item.productId },
+      data: { stockQuantity: { decrement: item.quantity } }
+    });
   }
 
   return prisma.order.create({
@@ -1235,6 +1316,57 @@ async function updateVendorOrderStatus(userId, orderId, status, note) {
   });
 }
 
+async function listContactMessages() {
+  if (!hasDatabase) {
+    return [...memoryStore.contactMessages].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  }
+  return prisma.contactMessage.findMany({ orderBy: { createdAt: "desc" } });
+}
+
+async function cancelCustomerOrder(userId, orderNumber) {
+  const user = await getAuthUser(userId);
+  if (!user?.customerProfile) {
+    throw new Error("Customer profile not found.");
+  }
+
+  if (!hasDatabase) {
+    const order = memoryStore.orders.find(
+      (o) => o.orderNumber === orderNumber && o.customerProfileId === user.customerProfile.id
+    );
+    if (!order) throw new Error("Order not found.");
+    if (!["PAID", "PROCESSING"].includes(order.status)) {
+      throw new Error("Only orders with status PAID or PROCESSING can be cancelled.");
+    }
+    order.status = "CANCELLED";
+    order.updatedAt = new Date().toISOString();
+    memoryStore.orderStatusHistory.push({
+      id: `order-status-${memoryStore.orderStatusHistory.length + 1}`,
+      orderId: order.id,
+      status: "CANCELLED",
+      note: "Cancelled by customer.",
+      createdAt: new Date().toISOString()
+    });
+    return { ...order, statusHistory: memoryStore.orderStatusHistory.filter((e) => e.orderId === order.id) };
+  }
+
+  const order = await prisma.order.findFirst({
+    where: { orderNumber, customerProfileId: user.customerProfile.id }
+  });
+  if (!order) throw new Error("Order not found.");
+  if (!["PAID", "PROCESSING"].includes(order.status)) {
+    throw new Error("Only orders with status PAID or PROCESSING can be cancelled.");
+  }
+
+  return prisma.order.update({
+    where: { id: order.id },
+    data: {
+      status: "CANCELLED",
+      statusHistory: { create: { status: "CANCELLED", note: "Cancelled by customer." } }
+    },
+    include: { items: true, statusHistory: { orderBy: { createdAt: "asc" } } }
+  });
+}
+
 module.exports = {
   listCategories,
   listProducts,
@@ -1248,11 +1380,14 @@ module.exports = {
   listVendorProducts,
   createVendorProduct,
   updateVendorProduct,
+  deleteVendorProduct,
+  updateVendorStore,
   addCustomerAddress,
   createOrder,
   getOrderByNumber,
   listCustomerOrders,
   getCustomerOrder,
+  cancelCustomerOrder,
   listPendingVendors,
   approveVendor,
   rejectVendor,
@@ -1264,5 +1399,6 @@ module.exports = {
   deleteCustomerAddress,
   listVendorOrders,
   updateVendorOrderStatus,
+  listContactMessages,
   POLL_CHOICES
 };

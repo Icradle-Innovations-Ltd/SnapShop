@@ -1,5 +1,5 @@
 const express = require("express");
-const { addCustomerAddress, listCustomerOrders, getCustomerOrder, deleteCustomerAddress } = require("../services/storeService");
+const { addCustomerAddress, listCustomerOrders, getCustomerOrder, deleteCustomerAddress, cancelCustomerOrder } = require("../services/storeService");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { assertNonEmptyString } = require("../utils/validation");
 
@@ -49,6 +49,15 @@ router.delete("/addresses/:id", async (req, res, next) => {
   try {
     const result = await deleteCustomerAddress(req.auth.user.id, req.params.id);
     res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/orders/:orderNumber/cancel", async (req, res, next) => {
+  try {
+    const order = await cancelCustomerOrder(req.auth.user.id, req.params.orderNumber);
+    res.json({ message: "Order cancelled.", order });
   } catch (error) {
     next(error);
   }

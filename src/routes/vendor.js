@@ -1,9 +1,11 @@
 const express = require("express");
 const {
   createVendorStore,
+  updateVendorStore,
   listVendorProducts,
   createVendorProduct,
   updateVendorProduct,
+  deleteVendorProduct,
   listVendorOrders,
   updateVendorOrderStatus
 } = require("../services/storeService");
@@ -62,6 +64,24 @@ router.patch("/products/:id", async (req, res, next) => {
       message: "Product updated successfully.",
       product
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/products/:id", async (req, res, next) => {
+  try {
+    const result = await deleteVendorProduct(req.auth.user.id, req.params.id);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/store", async (req, res, next) => {
+  try {
+    const store = await updateVendorStore(req.auth.user.id, req.body);
+    res.json({ message: "Store updated successfully.", store });
   } catch (error) {
     next(error);
   }

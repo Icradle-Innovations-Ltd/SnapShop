@@ -238,9 +238,13 @@
     let allOrders = [];
     let allUsers = [];
     let allVendors = [];
+    let allProducts = [];
+    let allMessages = [];
     try { allOrders = (await request("/admin/orders")).orders || []; } catch {}
     try { allUsers = (await request("/admin/users")).users || []; } catch {}
     try { allVendors = (await request("/admin/vendors")).vendors || []; } catch {}
+    try { allProducts = (await request("/admin/products")).products || []; } catch {}
+    try { allMessages = (await request("/admin/contact-messages")).messages || []; } catch {}
 
     const pendingVendors = allVendors.filter((v) => v.status === "PENDING");
     const totalRevenue = allOrders.reduce((s, o) => s + (o.total || 0), 0);
@@ -255,7 +259,9 @@
       { key: "overview", label: "Overview" },
       { key: "users", label: "Users" },
       { key: "vendors", label: "Vendors" },
-      { key: "orders", label: "Orders" }
+      { key: "orders", label: "Orders" },
+      { key: "products", label: "Products" },
+      { key: "messages", label: "Messages" }
     ];
 
     let tabContent = "";
@@ -400,6 +406,54 @@
             </table>
           </div>
         </section>`;
+    } else if (activeTab === "products") {
+      tabContent = `
+        <section class="card dashboard-section">
+          <h2>All Products (${allProducts.length})</h2>
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Store</th>
+                  <th>Category</th>
+                  <th>Price</th>
+                  <th>Stock</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${allProducts.length ? allProducts.map((p) => `
+                  <tr>
+                    <td data-label="Name">${safe(p.name)}</td>
+                    <td data-label="Store">${safe(p.storeName || "N/A")}</td>
+                    <td data-label="Category">${safe(p.category || "")}</td>
+                    <td data-label="Price">${formatMoney(p.price)}</td>
+                    <td data-label="Stock">${safe(p.stockQuantity)}</td>
+                    <td data-label="Status"><span class="status-pill status-${(p.status || "").toLowerCase()}">${safe(roleLabel(p.status))}</span></td>
+                  </tr>
+                `).join("") : `<tr><td colspan="6" class="dashboard-empty">No products yet.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </section>`;
+    } else if (activeTab === "messages") {
+      tabContent = `
+        <section class="card dashboard-section">
+          <h2>Contact Messages (${allMessages.length})</h2>
+          <div class="dashboard-list">
+            ${allMessages.length ? allMessages.map((m) => `
+              <article class="dashboard-item">
+                <div class="dash-item-header">
+                  <h3>${safe(m.name)}</h3>
+                  <span class="dashboard-meta">${formatDate(m.createdAt)}</span>
+                </div>
+                <p class="dashboard-meta">${safe(m.email)}</p>
+                <p>${safe(m.message)}</p>
+              </article>
+            `).join("") : `<p class="dashboard-empty">No contact messages yet.</p>`}
+          </div>
+        </section>`;
     }
 
     return `
@@ -497,6 +551,12 @@
               <p>${safe(user.vendorProfile.store.description)}</p>
               <p class="dashboard-meta">Slug: ${safe(user.vendorProfile.store.slug)}</p>
             </div>
+            <form id="store-edit-form" class="dashboard-stack">
+              <label><span>Store name</span><input name="name" type="text" value="${safe(user.vendorProfile.store.name)}" required></label>
+              <label><span>Store description</span><textarea name="description" rows="4" required>${safe(user.vendorProfile.store.description)}</textarea></label>
+              <button class="button button-primary" type="submit">Update Store</button>
+              <p id="store-edit-message" class="form-message" aria-live="polite"></p>
+            </form>
           ` : user.vendorProfile?.status !== "APPROVED" ? `
             <div class="dashboard-callout dash-callout-warning">
               <strong>Awaiting Approval</strong>
@@ -533,6 +593,7 @@
                 <label><span>Description</span><textarea name="description" rows="4" required></textarea></label>
                 <label><span>Price (UGX)</span><input name="price" type="number" min="1" required></label>
                 <label><span>Stock quantity</span><input name="stockQuantity" type="number" min="0" required></label>
+                <label><span>Image URL</span><input name="imageUrl" type="url" placeholder="https://example.com/image.jpg"></label>
                 <label>
                   <span>Status</span>
                   <select name="status">
@@ -549,17 +610,31 @@
             <h2>Your Listings (${products.length})</h2>
             <div class="dashboard-list">
               ${products.length ? products.map((p) => `
-                <article class="dashboard-item">
+                <article class="dashboard-item" id="product-item-${safe(p.id)}">
                   <div class="dash-item-header">
                     <h3>${safe(p.name)}</h3>
                     <span class="status-pill">${safe(roleLabel(p.status))}</span>
                   </div>
-                  <p class="dashboard-meta">${safe(p.sku)} &middot; ${formatMoney(p.price)} &middot; Stock: ${safe(p.stockQuantity)}</p>
+                  <p class="dashboard-meta">${safe(p.sku)} &middot; ${formatMoney(p.price)} &middot; Stock: ${safe(p.stockQuantity)}${p.imageUrl ? ` &middot; <a href="${safe(p.imageUrl)}" target="_blank">Image</a>` : ""}</p>
                   <div class="dash-item-actions">
                     <button class="button button-sm button-secondary" data-quick-status="${safe(p.id)}" data-next-status="${p.status === "ACTIVE" ? "DRAFT" : "ACTIVE"}">
                       Mark ${p.status === "ACTIVE" ? "Draft" : "Active"}
                     </button>
+                    <button class="button button-sm button-secondary" data-edit-product="${safe(p.id)}">Edit</button>
+                    <button class="button button-sm button-danger" data-delete-product="${safe(p.id)}">Delete</button>
                   </div>
+                  <form class="dashboard-stack product-edit-form" id="edit-form-${safe(p.id)}" style="display:none;margin-top:0.75rem;">
+                    <label><span>Name</span><input name="name" type="text" value="${safe(p.name)}"></label>
+                    <label><span>Description</span><textarea name="description" rows="2">${safe(p.description || "")}</textarea></label>
+                    <label><span>Price (UGX)</span><input name="price" type="number" min="1" value="${p.price}"></label>
+                    <label><span>Stock</span><input name="stockQuantity" type="number" min="0" value="${p.stockQuantity}"></label>
+                    <label><span>Image URL</span><input name="imageUrl" type="url" value="${safe(p.imageUrl || "")}" placeholder="https://example.com/image.jpg"></label>
+                    <div class="dash-item-actions">
+                      <button class="button button-sm button-primary" type="submit">Save Changes</button>
+                      <button class="button button-sm button-secondary" type="button" data-cancel-edit="${safe(p.id)}">Cancel</button>
+                    </div>
+                    <p class="form-message edit-product-message" aria-live="polite"></p>
+                  </form>
                 </article>
               `).join("") : `<p class="dashboard-empty">No products yet. Create your first listing!</p>`}
             </div>
@@ -624,7 +699,10 @@
 
     const activeTab = state.dashTab || "overview";
     const totalSpent = orders.reduce((s, o) => s + (o.total || 0), 0);
-    const wishlist = JSON.parse(localStorage.getItem("snapshop_wishlist") || "[]");
+    const wishlistIds = JSON.parse(localStorage.getItem("snapshopWishlist") || "[]");
+    let allProducts = [];
+    try { allProducts = (await request("/products")).products || []; } catch {}
+    const wishlist = wishlistIds.map((id) => allProducts.find((p) => p.id === id || p.slug === id)).filter(Boolean);
 
     const tabs = [
       { key: "overview", label: "Overview" },
@@ -699,6 +777,11 @@
                     ${o.items.map((it) => `<span class="dash-order-item-tag">${safe(it.productName)} &times; ${it.quantity}</span>`).join("")}
                   </div>
                 ` : ""}
+                ${["PAID", "PROCESSING"].includes(o.status) ? `
+                  <div class="dash-item-actions" style="margin-top:0.5rem;">
+                    <button class="button button-sm button-danger" data-cancel-order="${safe(o.orderNumber)}">Cancel Order</button>
+                  </div>
+                ` : ""}
                 <div class="tracking-timeline">
                   ${(o.statusHistory || []).map((entry, idx, arr) => {
                     const isCurrent = idx === arr.length - 1;
@@ -757,11 +840,11 @@
             ${wishlist.length ? wishlist.map((item) => `
               <article class="dashboard-item">
                 <div class="dash-item-header">
-                  <h3>${safe(item.name || item.id)}</h3>
+                  <h3>${safe(item.name)}</h3>
                   <button class="button button-danger button-sm" data-remove-wishlist="${safe(item.id)}" title="Remove from wishlist">✕</button>
                 </div>
-                <p class="dashboard-meta">${item.price ? formatMoney(item.price) : ""}</p>
-                <a class="button button-sm button-secondary" href="product.html?slug=${safe(item.slug || item.id)}">View Product</a>
+                <p class="dashboard-meta">${formatMoney(item.price)} &middot; ${safe(item.category || "")}</p>
+                <a class="button button-sm button-secondary" href="product.html?id=${safe(item.id)}">View Product</a>
               </article>
             `).join("") : `<p class="dashboard-empty">Your wishlist is empty. <a href="shop.html">Discover products you love!</a></p>`}
           </div>
@@ -883,6 +966,31 @@
       storeForm.dataset.bound = "true";
     }
 
+    const storeEditForm = document.getElementById("store-edit-form");
+    if (storeEditForm && storeEditForm.dataset.bound !== "true") {
+      storeEditForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const message = document.getElementById("store-edit-message");
+        if (!storeEditForm.reportValidity()) {
+          message.textContent = "Please complete the form.";
+          return;
+        }
+        try {
+          await request("/vendor/store", {
+            method: "PATCH",
+            body: JSON.stringify(Object.fromEntries(new FormData(storeEditForm).entries()))
+          });
+          await refreshUser();
+          renderNav();
+          toast("Store updated.");
+          await renderDashboard();
+        } catch (error) {
+          message.textContent = error.message;
+        }
+      });
+      storeEditForm.dataset.bound = "true";
+    }
+
     const productForm = document.getElementById("vendor-product-form");
     if (productForm && productForm.dataset.bound !== "true") {
       productForm.addEventListener("submit", async (event) => {
@@ -911,6 +1019,29 @@
       });
       productForm.dataset.bound = "true";
     }
+
+    document.querySelectorAll(".product-edit-form").forEach((form) => {
+      if (form.dataset.bound === "true") return;
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const productId = form.id.replace("edit-form-", "");
+        const message = form.querySelector(".edit-product-message");
+        const payload = Object.fromEntries(new FormData(form).entries());
+        if (payload.price) payload.price = Number(payload.price);
+        if (payload.stockQuantity) payload.stockQuantity = Number(payload.stockQuantity);
+        try {
+          await request(`/vendor/products/${productId}`, {
+            method: "PATCH",
+            body: JSON.stringify(payload)
+          });
+          toast("Product updated.");
+          await renderDashboard();
+        } catch (error) {
+          if (message) message.textContent = error.message;
+        }
+      });
+      form.dataset.bound = "true";
+    });
 
     const addressForm = document.getElementById("address-form");
     if (addressForm && addressForm.dataset.bound !== "true") {
@@ -1095,11 +1226,55 @@
       /* Customer: Remove wishlist item */
       const removeWish = event.target.closest("[data-remove-wishlist]");
       if (removeWish) {
-        const wl = JSON.parse(localStorage.getItem("snapshop_wishlist") || "[]");
-        const updated = wl.filter((item) => item.id !== removeWish.dataset.removeWishlist);
-        localStorage.setItem("snapshop_wishlist", JSON.stringify(updated));
+        const wl = JSON.parse(localStorage.getItem("snapshopWishlist") || "[]");
+        const updated = wl.filter((id) => id !== removeWish.dataset.removeWishlist);
+        localStorage.setItem("snapshopWishlist", JSON.stringify(updated));
         toast("Removed from wishlist.");
         await renderDashboard();
+        return;
+      }
+
+      /* Vendor: Edit product toggle */
+      const editProduct = event.target.closest("[data-edit-product]");
+      if (editProduct) {
+        const formEl = document.getElementById(`edit-form-${editProduct.dataset.editProduct}`);
+        if (formEl) formEl.style.display = formEl.style.display === "none" ? "block" : "none";
+        return;
+      }
+
+      /* Vendor: Cancel edit */
+      const cancelEdit = event.target.closest("[data-cancel-edit]");
+      if (cancelEdit) {
+        const formEl = document.getElementById(`edit-form-${cancelEdit.dataset.cancelEdit}`);
+        if (formEl) formEl.style.display = "none";
+        return;
+      }
+
+      /* Vendor: Delete product */
+      const deleteProduct = event.target.closest("[data-delete-product]");
+      if (deleteProduct) {
+        if (!confirm("Delete this product permanently?")) return;
+        try {
+          await request(`/vendor/products/${deleteProduct.dataset.deleteProduct}`, { method: "DELETE" });
+          toast("Product deleted.");
+          await renderDashboard();
+        } catch (error) {
+          toast(error.message);
+        }
+        return;
+      }
+
+      /* Customer: Cancel order */
+      const cancelOrder = event.target.closest("[data-cancel-order]");
+      if (cancelOrder) {
+        if (!confirm("Cancel this order?")) return;
+        try {
+          await request(`/customer/orders/${cancelOrder.dataset.cancelOrder}/cancel`, { method: "PATCH" });
+          toast("Order cancelled.");
+          await renderDashboard();
+        } catch (error) {
+          toast(error.message);
+        }
         return;
       }
     });

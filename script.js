@@ -227,10 +227,18 @@ function saveCart(cart) {
 }
 
 /* --- Server-side cart sync (for logged-in customers) --- */
+function isCustomerToken() {
+  try {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (!token) return false;
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.role === "CUSTOMER";
+  } catch { return false; }
+}
 let _syncTimer = null;
 function syncCartToServer() {
+  if (!isCustomerToken()) return;
   const token = localStorage.getItem(AUTH_TOKEN_KEY);
-  if (!token) return;
   clearTimeout(_syncTimer);
   _syncTimer = setTimeout(() => {
     const cart = getCart();
@@ -251,8 +259,8 @@ function syncCartToServer() {
 }
 
 async function loadCartFromServer() {
+  if (!isCustomerToken()) return;
   const token = localStorage.getItem(AUTH_TOKEN_KEY);
-  if (!token) return;
   try {
     const res = await fetch(`${API_BASE}/customer/cart`, {
       headers: { Authorization: `Bearer ${token}` }
@@ -438,8 +446,8 @@ function clearCart() {
     saveCart([]);
     localStorage.removeItem(CHECKOUT_KEY);
     /* Also clear server-side cart */
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
-    if (token) {
+    if (isCustomerToken()) {
+      const token = localStorage.getItem(AUTH_TOKEN_KEY);
       fetch(`${API_BASE}/customer/cart`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${token}` }

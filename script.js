@@ -182,15 +182,18 @@ function confirmDialog(title, message) {
 }
 
 /* --- Product Image Helper --- */
+function productImgFallback(code) {
+  return `this.onerror=null;this.style.display='none';this.parentElement.innerHTML='<div class="product-visual-code">${code}</div>';`;
+}
 function getProductImage(product) {
+  const code = product.visualCode || (product.category || "").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   /* Prefer uploaded images array */
   if (product.images && product.images.length) {
-    return `<img src="${product.images[0].url}" alt="${product.images[0].alt || product.name}" loading="lazy">`;
+    return `<img src="${product.images[0].url}" alt="${product.images[0].alt || product.name}" loading="lazy" onerror="${productImgFallback(code)}">`;
   }
-  if (product.imageUrl) return `<img src="${product.imageUrl}" alt="${product.name}" loading="lazy">`;
+  if (product.imageUrl) return `<img src="${product.imageUrl}" alt="${product.name}" loading="lazy" onerror="${productImgFallback(code)}">`;
   const img = product.image || PRODUCT_IMAGES[product.id] || PRODUCT_IMAGES[product.slug];
-  if (img) return `<img src="${img}" alt="${product.name}" loading="lazy">`;
-  const code = product.visualCode || product.category.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
+  if (img) return `<img src="${img}" alt="${product.name}" loading="lazy" onerror="${productImgFallback(code)}">`;
   return `<div class="product-visual-code">${code}</div>`;
 }
 
@@ -708,7 +711,6 @@ function renderCheckoutPage() {
   form.dataset.bound = "true";
 
   /* Load saved addresses for logged-in customers */
-  const token = localStorage.getItem(AUTH_TOKEN_KEY);
   if (token) {
     apiRequest("/auth/me").then((data) => {
       const addresses = data.user?.customerProfile?.addresses || [];
@@ -1078,8 +1080,9 @@ function renderProductDetail() {
 
   const wishActive = isWishlisted(product.id);
   const related = getProducts().filter(p => p.categorySlug === product.categorySlug && p.id !== product.id).slice(0, 3);
+  const code = product.visualCode || (product.category || "").split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   const allImages = getProductImages(product);
-  const mainImage = allImages.length ? `<img src="${allImages[0].url}" alt="${allImages[0].alt || product.name}" id="detail-main-img" loading="lazy">` : getProductImage(product);
+  const mainImage = allImages.length ? `<img src="${allImages[0].url}" alt="${allImages[0].alt || product.name}" id="detail-main-img" loading="lazy" onerror="${productImgFallback(code)}">` : getProductImage(product);
 
   container.innerHTML = `
     <div class="product-detail-layout">
@@ -1089,7 +1092,7 @@ function renderProductDetail() {
           <div class="product-detail-thumbnails">
             ${allImages.map((img, i) => `
               <button class="detail-thumb${i === 0 ? " is-active" : ""}" type="button" data-thumb-url="${img.url}" data-thumb-alt="${img.alt || product.name}">
-                <img src="${img.url}" alt="${img.alt || product.name}" loading="lazy">
+                <img src="${img.url}" alt="${img.alt || product.name}" loading="lazy" onerror="this.onerror=null;this.src='assets/products/smart-plug.svg';">
               </button>
             `).join("")}
           </div>

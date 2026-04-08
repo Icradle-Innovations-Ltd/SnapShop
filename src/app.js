@@ -1,4 +1,5 @@
 const express = require("express");
+const fs = require("fs");
 const path = require("path");
 const apiRouter = require("./routes/api");
 const authRouter = require("./routes/auth");
@@ -39,6 +40,9 @@ function createApp() {
   app.use(express.urlencoded({ extended: true }));
 
   app.use("/assets", express.static(path.join(ROOT_DIR, "assets")));
+  /* Ensure uploads directory exists */
+  const uploadsDir = path.join(ROOT_DIR, "uploads", "products");
+  fs.mkdirSync(uploadsDir, { recursive: true });
   app.use("/uploads", express.static(path.join(ROOT_DIR, "uploads")));
   app.get("/styles.css", (req, res) => res.sendFile(path.join(ROOT_DIR, "styles.css")));
   app.get("/script.js", (req, res) => res.sendFile(path.join(ROOT_DIR, "script.js")));

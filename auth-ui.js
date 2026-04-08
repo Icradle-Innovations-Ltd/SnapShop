@@ -521,7 +521,7 @@
                   <div class="product-image-gallery">
                     ${p.images.map((img) => `
                       <div class="product-image-thumb">
-                        <img src="${safe(img.url)}" alt="${safe(img.alt || p.name)}" loading="lazy" onerror="this.onerror=null;this.src='assets/products/smart-plug.svg';">
+                        <img src="${safe(img.url)}" alt="${safe(img.alt || p.name)}" loading="lazy" data-fallback>
                       </div>
                     `).join("")}
                   </div>
@@ -789,7 +789,7 @@
                     <div class="product-image-gallery">
                       ${p.images.map((img) => `
                         <div class="product-image-thumb">
-                          <img src="${safe(img.url)}" alt="${safe(img.alt || p.name)}" loading="lazy" onerror="this.onerror=null;this.src='assets/products/smart-plug.svg';">
+                          <img src="${safe(img.url)}" alt="${safe(img.alt || p.name)}" loading="lazy" data-fallback>
                           <button class="image-remove-btn" data-remove-image="${safe(img.id)}" data-product-id="${safe(p.id)}" title="Remove image">&times;</button>
                         </div>
                       `).join("")}
@@ -1539,7 +1539,7 @@
                   <strong>${safe(p.name)}</strong> &middot; ${formatMoney(p.price)} &middot; Stock: ${p.stockQuantity} &middot; <span class="status-pill status-${(p.status || "").toLowerCase()}">${safe(roleLabel(p.status))}</span>
                   ${(p.images && p.images.length) ? `
                     <div class="product-image-gallery" style="margin-top:0.25rem;">
-                      ${p.images.map((img) => `<div class="product-image-thumb"><img src="${safe(img.url)}" alt="${safe(img.alt || p.name)}" loading="lazy" onerror="this.onerror=null;this.src='assets/products/smart-plug.svg';"></div>`).join("")}
+                      ${p.images.map((img) => `<div class="product-image-thumb"><img src="${safe(img.url)}" alt="${safe(img.alt || p.name)}" loading="lazy" data-fallback></div>`).join("")}
                     </div>
                   ` : ""}
                 </div>
@@ -1873,6 +1873,13 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
+    /* Global fallback for broken product images */
+    document.addEventListener("error", function(e) {
+      if (e.target.tagName === "IMG" && e.target.hasAttribute("data-fallback")) {
+        e.target.removeAttribute("data-fallback");
+        e.target.src = "assets/products/placeholder.svg";
+      }
+    }, true);
     init().catch((error) => console.error(error));
   });
 })();

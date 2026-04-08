@@ -68,7 +68,6 @@ router.post("/products", async (req, res, next) => {
   try {
     assertNonEmptyString(req.body.name, "Product name");
     assertNonEmptyString(req.body.categorySlug, "Category");
-    assertNonEmptyString(req.body.sku, "SKU");
     assertNonEmptyString(req.body.description, "Description");
 
     const product = await createVendorProduct(req.auth.user.id, req.body);

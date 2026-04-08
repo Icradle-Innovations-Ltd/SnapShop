@@ -664,7 +664,6 @@
                     <option value="smart-home">Smart Home</option>`}
                   </select>
                 </label>
-                <label><span>SKU</span><input name="sku" type="text" required></label>
                 <label><span>Description</span><textarea name="description" rows="4" required></textarea></label>
                 <label><span>Price (UGX)</span><input name="price" type="number" min="1" required></label>
                 <label><span>Stock quantity</span><input name="stockQuantity" type="number" min="0" required></label>
@@ -1170,7 +1169,7 @@
         const formData = new FormData();
         Array.from(fileInput.files).forEach((f) => formData.append("images", f));
         try {
-          const token = localStorage.getItem("token");
+          const token = getToken();
           const res = await fetch(`/api/vendor/products/${productId}/images`, {
             method: "POST",
             headers: { Authorization: `Bearer ${token}` },

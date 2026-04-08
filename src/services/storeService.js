@@ -704,16 +704,18 @@ async function createVendorProduct(userId, payload) {
     throw new Error("Valid product name and category are required.");
   }
 
+  const sku = payload.sku?.trim() || `SKU-${categoryRecord.name.slice(0, 3).toUpperCase()}-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+
   if (!hasDatabase) {
-    if (memoryStore.products.some((product) => product.slug === slug || product.sku === payload.sku)) {
-      throw new Error("Product slug or SKU already exists.");
+    if (memoryStore.products.some((product) => product.slug === slug)) {
+      throw new Error("Product slug already exists.");
     }
 
     const product = {
       id: `product-${memoryStore.products.length + 1}`,
       name: payload.name.trim(),
       slug,
-      sku: payload.sku.trim(),
+      sku,
       description: payload.description.trim(),
       price: Number(payload.price),
       stockQuantity: Number(payload.stockQuantity),
@@ -748,7 +750,7 @@ async function createVendorProduct(userId, payload) {
     data: {
       name: payload.name.trim(),
       slug,
-      sku: payload.sku.trim(),
+      sku,
       description: payload.description.trim(),
       price: Number(payload.price),
       stockQuantity: Number(payload.stockQuantity),

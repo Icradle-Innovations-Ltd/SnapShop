@@ -50,6 +50,18 @@ function seedMemoryStore() {
     return;
   }
 
+  /* Seed categories into memory store */
+  CATEGORIES.forEach((cat, i) => {
+    memoryStore.categories.push({
+      id: `category-${i + 1}`,
+      name: cat.name,
+      slug: cat.slug,
+      description: cat.description,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+  });
+
   const adminUser = {
     id: "user-admin",
     name: DEMO_USERS.admin.name,
@@ -150,7 +162,7 @@ seedMemoryStore();
 
 async function listCategories() {
   if (!hasDatabase) {
-    return CATEGORIES.map((category) => ({
+    return memoryStore.categories.map((category) => ({
       ...category,
       productCount: memoryStore.products.filter((product) => product.categorySlug === category.slug && product.active).length
     }));
@@ -179,6 +191,101 @@ async function listCategories() {
     description: category.description,
     productCount: category._count.products
   }));
+}
+
+async function createCategory(payload) {
+  const name = (payload.name || "").trim();
+  const description = (payload.description || "").trim();
+  const slug = slugify(name);
+  if (!name || !slug) throw new Error("Category name is required.");
+
+  if (!hasDatabase) {
+    if (memoryStore.categories.some((c) => c.slug === slug)) throw new Error("Category with this name already exists.");
+    const cat = {
+      id: `category-${Date.now()}`,
+      name,
+      slug,
+      description,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    memoryStore.categories.push(cat);
+    return { ...cat, productCount: 0 };
+  }
+
+  const existing = await prisma.category.findUnique({ where: { slug } });
+  if (existing) throw new Error("Category with this name already exists.");
+
+  const cat = await prisma.category.create({
+    data: { name, slug, description }
+  });
+  return { id: cat.id, name: cat.name, slug: cat.slug, description: cat.description, productCount: 0 };
+}
+
+async function updateCategory(categoryId, payload) {
+  const name = payload.name?.trim();
+  const description = payload.description?.trim();
+  const slug = name ? slugify(name) : null;
+
+  if (!hasDatabase) {
+    const cat = memoryStore.categories.find((c) => c.id === categoryId);
+    if (!cat) throw new Error("Category not found.");
+    if (name && slug && slug !== cat.slug && memoryStore.categories.some((c) => c.slug === slug)) {
+      throw new Error("Category with this name already exists.");
+    }
+    if (name) { cat.name = name; cat.slug = slug; }
+    if (description !== undefined) cat.description = description;
+    cat.updatedAt = new Date().toISOString();
+    /* Update denormalized category info on products */
+    if (name) {
+      memoryStore.products.forEach((p) => {
+        if (p.categorySlug === cat.slug || p.categoryId === categoryId) {
+          p.categoryName = cat.name;
+          p.categorySlug = cat.slug;
+        }
+      });
+    }
+    return { ...cat, productCount: memoryStore.products.filter((p) => p.categorySlug === cat.slug && p.active).length };
+  }
+
+  const cat = await prisma.category.findUnique({ where: { id: categoryId } });
+  if (!cat) throw new Error("Category not found.");
+  if (slug && slug !== cat.slug) {
+    const dup = await prisma.category.findUnique({ where: { slug } });
+    if (dup) throw new Error("Category with this name already exists.");
+  }
+
+  const updated = await prisma.category.update({
+    where: { id: categoryId },
+    data: {
+      ...(name ? { name, slug } : {}),
+      ...(description !== undefined ? { description } : {})
+    },
+    include: { _count: { select: { products: { where: { active: true, status: "ACTIVE" } } } } }
+  });
+  return { id: updated.id, name: updated.name, slug: updated.slug, description: updated.description, productCount: updated._count.products };
+}
+
+async function deleteCategory(categoryId) {
+  if (!hasDatabase) {
+    const idx = memoryStore.categories.findIndex((c) => c.id === categoryId);
+    if (idx === -1) throw new Error("Category not found.");
+    const cat = memoryStore.categories[idx];
+    const hasProducts = memoryStore.products.some((p) => p.categorySlug === cat.slug);
+    if (hasProducts) throw new Error("Cannot delete a category that still has products. Move or delete the products first.");
+    memoryStore.categories.splice(idx, 1);
+    return { message: "Category deleted." };
+  }
+
+  const cat = await prisma.category.findUnique({
+    where: { id: categoryId },
+    include: { _count: { select: { products: true } } }
+  });
+  if (!cat) throw new Error("Category not found.");
+  if (cat._count.products > 0) throw new Error("Cannot delete a category that still has products. Move or delete the products first.");
+
+  await prisma.category.delete({ where: { id: categoryId } });
+  return { message: "Category deleted." };
 }
 
 async function listProducts(filters = {}) {
@@ -591,7 +698,8 @@ async function createVendorProduct(userId, payload) {
   }
 
   const slug = slugify(payload.name);
-  const categoryRecord = CATEGORIES.find((category) => category.slug === payload.categorySlug);
+  const categoryRecord = memoryStore.categories.find((c) => c.slug === payload.categorySlug)
+    || CATEGORIES.find((category) => category.slug === payload.categorySlug);
   if (!slug || !categoryRecord) {
     throw new Error("Valid product name and category are required.");
   }
@@ -1566,6 +1674,9 @@ async function adminUpdateStore(storeId, payload) {
 
 module.exports = {
   listCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
   listProducts,
   getProductByIdOrSlug,
   registerUser,

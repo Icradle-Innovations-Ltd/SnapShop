@@ -7,6 +7,7 @@ const memoryStore = {
   stores: [],
   addresses: [],
   products: [],
+  categories: [],
   orderStatusHistory: [],
   contactMessages: [],
   pollVotes: POLL_CHOICES.map((choice) => ({ choice, count: 0 })),

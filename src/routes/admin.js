@@ -7,6 +7,10 @@ const {
   toggleUserActive,
   updateOrderStatus,
   listProducts,
+  listCategories,
+  createCategory,
+  updateCategory,
+  deleteCategory,
   listContactMessages,
   adminUpdateProduct,
   adminDeleteProduct,
@@ -186,6 +190,43 @@ router.patch("/stores/:id", async (req, res, next) => {
   try {
     const store = await adminUpdateStore(req.params.id, req.body);
     res.json({ message: "Store updated.", store });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/* ─── Category Management ─── */
+router.get("/categories", async (req, res, next) => {
+  try {
+    const categories = await listCategories();
+    res.json({ categories });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/categories", async (req, res, next) => {
+  try {
+    const category = await createCategory(req.body);
+    res.status(201).json({ message: "Category created.", category });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/categories/:id", async (req, res, next) => {
+  try {
+    const category = await updateCategory(req.params.id, req.body);
+    res.json({ message: "Category updated.", category });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/categories/:id", async (req, res, next) => {
+  try {
+    const result = await deleteCategory(req.params.id);
+    res.json(result);
   } catch (error) {
     next(error);
   }

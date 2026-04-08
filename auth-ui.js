@@ -240,11 +240,13 @@
     let allVendors = [];
     let allProducts = [];
     let allMessages = [];
+    let allCategories = [];
     try { allOrders = (await request("/admin/orders")).orders || []; } catch {}
     try { allUsers = (await request("/admin/users")).users || []; } catch {}
     try { allVendors = (await request("/admin/vendors")).vendors || []; } catch {}
     try { allProducts = (await request("/admin/products")).products || []; } catch {}
     try { allMessages = (await request("/admin/contact-messages")).messages || []; } catch {}
+    try { allCategories = (await request("/admin/categories")).categories || []; } catch {}
 
     const pendingVendors = allVendors.filter((v) => v.status === "PENDING");
     const totalRevenue = allOrders.reduce((s, o) => s + (o.total || 0), 0);
@@ -261,6 +263,7 @@
       { key: "vendors", label: "Vendors" },
       { key: "orders", label: "Orders" },
       { key: "products", label: "Products" },
+      { key: "categories", label: "Categories" },
       { key: "stores", label: "Stores" },
       { key: "messages", label: "Messages" }
     ];
@@ -466,6 +469,46 @@
             `).join("") : `<p class="dashboard-empty">No vendor stores created yet.</p>`}
           </div>
         </section>`;
+    } else if (activeTab === "categories") {
+      tabContent = `
+        <section class="dashboard-two-column">
+          <article class="card dashboard-section">
+            <h2>Create Category</h2>
+            <form id="admin-category-form" class="dashboard-stack">
+              <label><span>Category Name</span><input name="name" type="text" required></label>
+              <label><span>Description</span><textarea name="description" rows="3" required></textarea></label>
+              <button class="button button-primary" type="submit">Create Category</button>
+              <p id="admin-category-message" class="form-message" aria-live="polite"></p>
+            </form>
+          </article>
+          <article class="card dashboard-section">
+            <h2>All Categories (${allCategories.length})</h2>
+            <div class="dashboard-list">
+              ${allCategories.length ? allCategories.map((c) => `
+                <article class="dashboard-item" id="admin-cat-${safe(c.id)}">
+                  <div class="dash-item-header">
+                    <h3>${safe(c.name)}</h3>
+                    <span class="status-pill">${safe(c.productCount ?? 0)} product${(c.productCount ?? 0) !== 1 ? "s" : ""}</span>
+                  </div>
+                  <p class="dashboard-meta">Slug: ${safe(c.slug)} ${c.description ? "&middot; " + safe(c.description) : ""}</p>
+                  <div class="dash-item-actions">
+                    <button class="button button-sm button-secondary" data-edit-category="${safe(c.id)}">Edit</button>
+                    <button class="button button-sm button-danger" data-delete-category="${safe(c.id)}">Delete</button>
+                  </div>
+                  <form class="dashboard-stack category-edit-form" id="edit-cat-${safe(c.id)}" style="display:none;margin-top:0.75rem;">
+                    <label><span>Name</span><input name="name" type="text" value="${safe(c.name)}"></label>
+                    <label><span>Description</span><textarea name="description" rows="2">${safe(c.description || "")}</textarea></label>
+                    <div class="dash-item-actions">
+                      <button class="button button-sm button-primary" type="submit">Save Changes</button>
+                      <button class="button button-sm button-secondary" type="button" data-cancel-cat-edit="${safe(c.id)}">Cancel</button>
+                    </div>
+                    <p class="form-message edit-category-message" aria-live="polite"></p>
+                  </form>
+                </article>
+              `).join("") : `<p class="dashboard-empty">No categories yet. Create your first one!</p>`}
+            </div>
+          </article>
+        </section>`;
     } else if (activeTab === "messages") {
       tabContent = `
         <section class="card dashboard-section">
@@ -508,6 +551,8 @@
     const orders = user.vendorProfile?.store
       ? await request("/vendor/orders").then((d) => d.orders).catch(() => [])
       : [];
+    let vendorCategories = [];
+    try { vendorCategories = (await request("/categories")).categories || []; } catch {}
 
     const activeTab = state.dashTab || "overview";
     const vendorStatuses = ["PROCESSING", "READY_FOR_PICKUP", "IN_TRANSIT", "DELIVERED", "CANCELLED"];
@@ -610,12 +655,13 @@
                 <label><span>Product name</span><input name="name" type="text" required></label>
                 <label>
                   <span>Category</span>
-                  <select name="categorySlug">
+                  <select name="categorySlug" required>
+                    ${vendorCategories.length ? vendorCategories.map((c) => `<option value="${safe(c.slug)}">${safe(c.name)}</option>`).join("") : `
                     <option value="creator-gear">Creator Gear</option>
                     <option value="audio">Audio</option>
                     <option value="power">Power</option>
                     <option value="workspace">Workspace</option>
-                    <option value="smart-home">Smart Home</option>
+                    <option value="smart-home">Smart Home</option>`}
                   </select>
                 </label>
                 <label><span>SKU</span><input name="sku" type="text" required></label>
@@ -1141,6 +1187,45 @@
       form.dataset.bound = "true";
     });
 
+    /* ── Admin: Create category form ── */
+    const categoryForm = document.getElementById("admin-category-form");
+    if (categoryForm && categoryForm.dataset.bound !== "true") {
+      categoryForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const message = document.getElementById("admin-category-message");
+        if (!categoryForm.reportValidity()) { message.textContent = "Please fill in all fields."; return; }
+        const payload = Object.fromEntries(new FormData(categoryForm).entries());
+        try {
+          await request("/admin/categories", { method: "POST", body: JSON.stringify(payload) });
+          categoryForm.reset();
+          toast("Category created.");
+          await renderDashboard();
+        } catch (error) {
+          message.textContent = error.message;
+        }
+      });
+      categoryForm.dataset.bound = "true";
+    }
+
+    /* ── Admin: Edit category forms ── */
+    document.querySelectorAll(".category-edit-form").forEach((form) => {
+      if (form.dataset.bound === "true") return;
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const categoryId = form.id.replace("edit-cat-", "");
+        const message = form.querySelector(".edit-category-message");
+        const payload = Object.fromEntries(new FormData(form).entries());
+        try {
+          await request(`/admin/categories/${categoryId}`, { method: "PATCH", body: JSON.stringify(payload) });
+          toast("Category updated.");
+          await renderDashboard();
+        } catch (error) {
+          if (message) message.textContent = error.message;
+        }
+      });
+      form.dataset.bound = "true";
+    });
+
     const addressForm = document.getElementById("address-form");
     if (addressForm && addressForm.dataset.bound !== "true") {
       addressForm.addEventListener("submit", async (event) => {
@@ -1385,6 +1470,36 @@
             body: JSON.stringify({ status: newStatus })
           });
           toast(`Store ${newStatus === "SUSPENDED" ? "suspended" : "activated"}.`);
+          await renderDashboard();
+        } catch (error) {
+          toast(error.message);
+        }
+        return;
+      }
+
+      /* Admin: Edit category toggle */
+      const editCat = event.target.closest("[data-edit-category]");
+      if (editCat) {
+        const formEl = document.getElementById(`edit-cat-${editCat.dataset.editCategory}`);
+        if (formEl) formEl.style.display = formEl.style.display === "none" ? "block" : "none";
+        return;
+      }
+
+      /* Admin: Cancel category edit */
+      const cancelCatEdit = event.target.closest("[data-cancel-cat-edit]");
+      if (cancelCatEdit) {
+        const formEl = document.getElementById(`edit-cat-${cancelCatEdit.dataset.cancelCatEdit}`);
+        if (formEl) formEl.style.display = "none";
+        return;
+      }
+
+      /* Admin: Delete category */
+      const deleteCat = event.target.closest("[data-delete-category]");
+      if (deleteCat) {
+        if (!confirm("Delete this category? Products must be moved first.")) return;
+        try {
+          await request(`/admin/categories/${deleteCat.dataset.deleteCategory}`, { method: "DELETE" });
+          toast("Category deleted.");
           await renderDashboard();
         } catch (error) {
           toast(error.message);

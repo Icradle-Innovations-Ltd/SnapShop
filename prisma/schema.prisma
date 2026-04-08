@@ -157,11 +157,13 @@ model Order {
   paymentMethod    String
   serviceFee       Int
   total            Int
-  status           OrderStatus          @default(PENDING)
-  items            OrderItem[]
-  statusHistory    OrderStatusHistory[]
-  customerProfile  CustomerProfile?     @relation(fields: [customerProfileId], references: [id], onDelete: SetNull)
-  store            Store                @relation(fields: [storeId], references: [id], onDelete: Restrict)
+  status                  OrderStatus          @default(PENDING)
+  pesapalTrackingId       String?
+  pesapalConfirmationCode String?
+  items                   OrderItem[]
+  statusHistory           OrderStatusHistory[]
+  customerProfile         CustomerProfile?     @relation(fields: [customerProfileId], references: [id], onDelete: SetNull)
+  store                   Store                @relation(fields: [storeId], references: [id], onDelete: Restrict)
   createdAt        DateTime             @default(now())
   updatedAt        DateTime             @updatedAt
 

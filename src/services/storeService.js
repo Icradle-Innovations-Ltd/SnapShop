@@ -935,6 +935,7 @@ async function addCustomerAddress(userId, payload) {
 }
 
 async function createOrder(payload, authUser = null) {
+  const initialStatus = payload.initialStatus || "PAID";
   const catalog = await listProducts({ includeDrafts: false });
   const requestedItems = Array.isArray(payload.items) ? payload.items : [];
 
@@ -994,16 +995,18 @@ async function createOrder(payload, authUser = null) {
     paymentMethod: payload.paymentMethod.trim(),
     serviceFee: totals.serviceFee,
     total: totals.total,
-    status: "PAID",
+    status: initialStatus,
     items: orderItems
   };
 
   if (!hasDatabase) {
-    /* Decrement stock in memory store */
-    for (const item of orderItems) {
-      const product = memoryStore.products.find((p) => p.id === item.productId);
-      if (product) {
-        product.stockQuantity = Math.max(0, product.stockQuantity - item.quantity);
+    /* Decrement stock in memory store (only when paid immediately) */
+    if (initialStatus === "PAID") {
+      for (const item of orderItems) {
+        const product = memoryStore.products.find((p) => p.id === item.productId);
+        if (product) {
+          product.stockQuantity = Math.max(0, product.stockQuantity - item.quantity);
+        }
       }
     }
 
@@ -1017,19 +1020,21 @@ async function createOrder(payload, authUser = null) {
     memoryStore.orderStatusHistory.push({
       id: `order-status-${memoryStore.orderStatusHistory.length + 1}`,
       orderId: record.id,
-      status: "PAID",
-      note: "Order created and paid.",
+      status: initialStatus,
+      note: initialStatus === "PAID" ? "Order created and paid." : "Order created — awaiting payment.",
       createdAt: new Date().toISOString()
     });
     return record;
   }
 
-  /* Decrement stock in database */
-  for (const item of orderItems) {
-    await prisma.product.update({
-      where: { id: item.productId },
-      data: { stockQuantity: { decrement: item.quantity } }
-    });
+  /* Decrement stock in database (only when paid immediately) */
+  if (initialStatus === "PAID") {
+    for (const item of orderItems) {
+      await prisma.product.update({
+        where: { id: item.productId },
+        data: { stockQuantity: { decrement: item.quantity } }
+      });
+    }
   }
 
   return prisma.order.create({
@@ -1046,7 +1051,7 @@ async function createOrder(payload, authUser = null) {
       paymentMethod: orderData.paymentMethod,
       serviceFee: orderData.serviceFee,
       total: orderData.total,
-      status: "PAID",
+      status: initialStatus,
       items: {
         create: orderItems.map((item) => ({
           productName: item.productName,
@@ -1062,8 +1067,8 @@ async function createOrder(payload, authUser = null) {
       },
       statusHistory: {
         create: {
-          status: "PAID",
-          note: "Order created and paid."
+          status: initialStatus,
+          note: initialStatus === "PAID" ? "Order created and paid." : "Order created — awaiting payment."
         }
       }
     },
@@ -1330,6 +1335,93 @@ async function updateOrderStatus(orderId, status, note) {
     include: { items: true, statusHistory: { orderBy: { createdAt: "asc" } } }
   });
   return order;
+}
+
+async function updateOrderStatusByNumber(orderNumber, status, note) {
+  const validStatuses = ["PENDING", "PAID", "PROCESSING", "READY_FOR_PICKUP", "ASSIGNED_TO_AGENT", "IN_TRANSIT", "DELIVERED", "CANCELLED", "RETURN_REQUESTED"];
+  if (!validStatuses.includes(status)) {
+    throw new Error("Invalid order status.");
+  }
+
+  if (!hasDatabase) {
+    const order = memoryStore.orders.find((item) => item.orderNumber === orderNumber);
+    if (!order) {
+      throw new Error("Order not found.");
+    }
+
+    /* When transitioning to PAID, decrement stock */
+    if (status === "PAID" && order.status !== "PAID") {
+      const items = order.items || [];
+      for (const item of items) {
+        const product = memoryStore.products.find((p) => p.id === item.productId);
+        if (product) {
+          product.stockQuantity = Math.max(0, product.stockQuantity - item.quantity);
+        }
+      }
+    }
+
+    order.status = status;
+    order.updatedAt = new Date().toISOString();
+    memoryStore.orderStatusHistory.push({
+      id: `order-status-${memoryStore.orderStatusHistory.length + 1}`,
+      orderId: order.id,
+      status,
+      note: note || `Status changed to ${status}.`,
+      createdAt: new Date().toISOString()
+    });
+    return {
+      ...order,
+      statusHistory: memoryStore.orderStatusHistory.filter((e) => e.orderId === order.id)
+    };
+  }
+
+  /* When transitioning to PAID, decrement stock */
+  const existing = await prisma.order.findUnique({ where: { orderNumber }, include: { items: true } });
+  if (!existing) {
+    throw new Error("Order not found.");
+  }
+  if (status === "PAID" && existing.status !== "PAID") {
+    for (const item of existing.items) {
+      if (item.productId) {
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: { stockQuantity: { decrement: item.quantity } }
+        });
+      }
+    }
+  }
+
+  return prisma.order.update({
+    where: { orderNumber },
+    data: {
+      status,
+      statusHistory: {
+        create: { status, note: note || `Status changed to ${status}.` }
+      }
+    },
+    include: { items: true, statusHistory: { orderBy: { createdAt: "asc" } } }
+  });
+}
+
+async function updateOrderPesapalDetails(orderNumber, pesapalTrackingId, confirmationCode) {
+  if (!hasDatabase) {
+    const order = memoryStore.orders.find((item) => item.orderNumber === orderNumber);
+    if (!order) return null;
+    if (pesapalTrackingId) order.pesapalTrackingId = pesapalTrackingId;
+    if (confirmationCode) order.pesapalConfirmationCode = confirmationCode;
+    order.updatedAt = new Date().toISOString();
+    return order;
+  }
+
+  const data = {};
+  if (pesapalTrackingId) data.pesapalTrackingId = pesapalTrackingId;
+  if (confirmationCode) data.pesapalConfirmationCode = confirmationCode;
+  if (Object.keys(data).length === 0) return null;
+
+  return prisma.order.update({
+    where: { orderNumber },
+    data
+  });
 }
 
 async function deleteCustomerAddress(userId, addressId) {
@@ -1708,6 +1800,8 @@ module.exports = {
   updateUserProfile,
   changeUserPassword,
   updateOrderStatus,
+  updateOrderStatusByNumber,
+  updateOrderPesapalDetails,
   deleteCustomerAddress,
   listVendorOrders,
   updateVendorOrderStatus,

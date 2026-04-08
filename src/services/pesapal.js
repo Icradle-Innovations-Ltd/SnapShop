@@ -83,6 +83,7 @@ async function submitOrderRequest({ merchantReference, amount, description, call
     amount,
     description: (description || "SnapShop Order").slice(0, 100),
     callback_url: callbackUrl,
+    redirect_mode: "TOP_WINDOW",
     notification_id: ipnId,
     branch: "SnapShop - Kampala",
     billing_address: {
@@ -149,14 +150,86 @@ async function getTransactionStatus(orderTrackingId) {
     statusCode: data.status_code,
     merchantReference: data.merchant_reference,
     currency: data.currency,
+    paymentAccount: data.payment_account,
     error: data.error
   };
+}
+
+/* ── Get Registered IPNs ──────────────────────────────────── */
+
+async function getRegisteredIPNs() {
+  const token = await getAccessToken();
+
+  const res = await fetch(`${PESAPAL_API_URL}/api/URLSetup/GetIpnList`, {
+    method: "GET",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  return res.json();
+}
+
+/* ── Refund Request ───────────────────────────────────────── */
+
+async function refundRequest({ confirmationCode, amount, username, remarks }) {
+  const token = await getAccessToken();
+
+  const res = await fetch(`${PESAPAL_API_URL}/api/Transactions/RefundRequest`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      confirmation_code: confirmationCode,
+      amount: String(amount),
+      username,
+      remarks
+    })
+  });
+
+  const data = await res.json();
+  if (data.status !== "200") {
+    throw new Error(data.message || "Refund request failed.");
+  }
+  return data;
+}
+
+/* ── Cancel Order ─────────────────────────────────────────── */
+
+async function cancelOrder(orderTrackingId) {
+  const token = await getAccessToken();
+
+  const res = await fetch(`${PESAPAL_API_URL}/api/Transactions/CancelOrder`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`
+    },
+    body: JSON.stringify({
+      order_tracking_id: orderTrackingId
+    })
+  });
+
+  const data = await res.json();
+  if (data.status !== "200") {
+    throw new Error(data.message || "Order cancellation failed.");
+  }
+  return data;
 }
 
 module.exports = {
   getAccessToken,
   registerIPN,
   getIpnId,
+  getRegisteredIPNs,
   submitOrderRequest,
-  getTransactionStatus
+  getTransactionStatus,
+  refundRequest,
+  cancelOrder
 };

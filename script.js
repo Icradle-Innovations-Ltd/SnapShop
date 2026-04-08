@@ -1038,12 +1038,13 @@ function renderSuccessPage() {
   const isDemo = params.get("demo") === "1";
   const trackingId = params.get("tracking") || "";
 
+  /* Show initial confirmation immediately */
   container.innerHTML = `
     <div class="success-container">
       <div class="success-icon">&#10003;</div>
       <h1 style="font-family:Georgia,serif;margin:0 0 0.5rem;">Order Confirmed!</h1>
       <p style="color:var(--muted);margin:0 0 1.5rem;">Thank you for shopping with SnapShop. Your order has been placed successfully.</p>
-      <div class="success-details">
+      <div class="success-details" id="success-details">
         <div class="summary-line"><span>Order Reference</span><strong>${ref}</strong></div>
         ${trackingId ? `<div class="summary-line"><span>Pesapal Tracking</span><strong>${trackingId.slice(0,8)}...</strong></div>` : ""}
         <div class="summary-line"><span>Status</span><strong>${isDemo ? "Demo Order" : "Confirmed"}</strong></div>
@@ -1057,6 +1058,30 @@ function renderSuccessPage() {
       </div>
     </div>
   `;
+
+  /* Fetch full order details from API for richer display */
+  if (ref && ref !== "N/A" && !isDemo) {
+    apiRequest(`/orders/${encodeURIComponent(ref)}`)
+      .then((data) => {
+        const order = data.order;
+        if (!order) return;
+        const details = document.getElementById("success-details");
+        if (!details) return;
+        details.innerHTML = `
+          <div class="summary-line"><span>Order Reference</span><strong>${order.orderNumber}</strong></div>
+          ${trackingId ? `<div class="summary-line"><span>Pesapal Tracking</span><strong>${trackingId.slice(0,8)}...</strong></div>` : ""}
+          <div class="summary-line"><span>Status</span><strong>${order.status}</strong></div>
+          <div class="summary-line"><span>Payment Method</span><strong>${order.paymentMethod || "Pesapal"}</strong></div>
+          <div class="summary-line"><span>Customer</span><strong>${order.customerName}</strong></div>
+          <div class="summary-line"><span>Delivery</span><strong>${order.deliveryOption} — ${order.city}</strong></div>
+          ${(order.items || []).map((item) => `<div class="summary-line"><span>${item.productName} x ${item.quantity}</span><strong>UGX ${Number(item.lineTotal).toLocaleString()}</strong></div>`).join("")}
+          <div class="summary-line"><span>Service Fee</span><strong>UGX ${Number(order.serviceFee).toLocaleString()}</strong></div>
+          <div class="summary-line" style="font-size:1.1rem;"><span><strong>Total</strong></span><strong>UGX ${Number(order.total).toLocaleString()}</strong></div>
+          <div class="summary-line"><span>Date</span><strong>${new Date(order.createdAt).toLocaleDateString("en-UG", { year: "numeric", month: "long", day: "numeric" })}</strong></div>
+        `;
+      })
+      .catch(() => {});
+  }
 }
 
 async function bootstrap() {

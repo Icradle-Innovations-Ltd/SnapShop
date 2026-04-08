@@ -45,6 +45,7 @@ SnapShop is a full-stack e-commerce marketplace project built for the CIT 7201 /
 1. Copy `.env.example` to `.env`.
 2. Set `DATABASE_URL` to your PostgreSQL connection string.
 3. Set `JWT_SECRET` to a strong secret value.
+   If you are connecting from your local machine to Railway Postgres, set `DATABASE_PUBLIC_URL` to the Railway TCP proxy connection string and let the helper scripts use that automatically.
 4. Install dependencies:
 
    ```powershell
@@ -78,6 +79,7 @@ SnapShop is a full-stack e-commerce marketplace project built for the CIT 7201 /
 - Railway can start the app with the `npm start` script from `package.json`.
 - Before the app serves live traffic, run Prisma migrations with `npm run db:deploy`.
 - Seed the initial catalogue once with `npm run db:seed`.
+- From your local machine, use the public Railway proxy URL as `DATABASE_PUBLIC_URL`. Inside Railway itself, keep using the private `DATABASE_URL`.
 
 ## Demo Accounts
 

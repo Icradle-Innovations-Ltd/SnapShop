@@ -1,5 +1,9 @@
 require("dotenv").config();
 
+if (!process.env.DATABASE_URL && process.env.DATABASE_PUBLIC_URL) {
+  process.env.DATABASE_URL = process.env.DATABASE_PUBLIC_URL;
+}
+
 const { PrismaClient } = require("@prisma/client");
 const { CATEGORIES, DEFAULT_STORE, PRODUCTS, DEMO_USERS } = require("../src/data/catalog");
 const { hashPassword } = require("../src/utils/auth");

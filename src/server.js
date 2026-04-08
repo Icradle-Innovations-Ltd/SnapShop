@@ -1,5 +1,9 @@
 require("dotenv").config();
 
+if (!process.env.DATABASE_URL && process.env.DATABASE_PUBLIC_URL) {
+  process.env.DATABASE_URL = process.env.DATABASE_PUBLIC_URL;
+}
+
 const { createApp } = require("./app");
 const { prisma } = require("./lib/prisma");
 

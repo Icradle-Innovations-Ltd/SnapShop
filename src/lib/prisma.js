@@ -1,5 +1,9 @@
 let PrismaClient = null;
 
+if (!process.env.DATABASE_URL && process.env.DATABASE_PUBLIC_URL) {
+  process.env.DATABASE_URL = process.env.DATABASE_PUBLIC_URL;
+}
+
 try {
   ({ PrismaClient } = require("@prisma/client"));
 } catch (error) {

@@ -53,20 +53,30 @@
 
       <section class="checkout-layout">
         <article class="card">
-          <h2>Pay Securely</h2>
+          <h2>Pay Securely via Pesapal</h2>
           <p id="payment-customer" class="info-panel"></p>
           <div id="payment-summary" aria-live="polite"></div>
-          <button id="complete-payment" class="button button-primary" type="button">Pay Now</button>
+
+          <!-- Pesapal iframe container (hidden until payment initiated) -->
+          <div id="pesapal-container" class="pesapal-embed" style="display:none;">
+            <iframe id="pesapal-iframe" title="Pesapal Secure Payment" allowfullscreen></iframe>
+          </div>
+
+          <button id="complete-payment" class="button button-primary" type="button">Pay with Pesapal</button>
           <p id="payment-message" class="form-message" aria-live="polite"></p>
         </article>
         <aside class="card">
           <h2>Accepted Methods</h2>
           <ul class="check-list">
-            <li>Mobile Money</li>
-            <li>Debit or credit card</li>
-            <li>Cash on delivery for selected areas</li>
+            <li>Mobile Money (MTN, Airtel)</li>
+            <li>Visa / Mastercard</li>
+            <li>Bank transfer</li>
           </ul>
-          <p>The final order reference will appear here after successful payment.</p>
+          <div class="pesapal-badge">
+            <p><strong>Secured by Pesapal</strong></p>
+            <p>All transactions are encrypted and processed through Pesapal's PCI-DSS compliant gateway.</p>
+          </div>
+          <p id="payment-ref" style="margin-top:1rem;"></p>
         </aside>
       </section>
     </div>

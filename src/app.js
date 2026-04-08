@@ -5,6 +5,7 @@ const authRouter = require("./routes/auth");
 const vendorRouter = require("./routes/vendor");
 const customerRouter = require("./routes/customer");
 const adminRouter = require("./routes/admin");
+const pesapalRouter = require("./routes/pesapal");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
 const PAGE_FILES = new Set([
@@ -46,6 +47,7 @@ function createApp() {
   app.use("/api/vendor", vendorRouter);
   app.use("/api/customer", customerRouter);
   app.use("/api/admin", adminRouter);
+  app.use("/api/pesapal", pesapalRouter);
   app.use("/api", apiRouter);
 
   app.get("/", sendPage("index.html"));

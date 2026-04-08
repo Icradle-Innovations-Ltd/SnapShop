@@ -595,9 +595,52 @@ function renderPaymentPage() {
   const customerNode = document.getElementById("payment-customer");
   const summaryContainer = document.getElementById("payment-summary");
   const payButton = document.getElementById("complete-payment");
+  const pesapalContainer = document.getElementById("pesapal-container");
 
   if (!customerNode || !summaryContainer || !payButton) {
     return;
+  }
+
+  /* Handle Pesapal callback params */
+  const params = new URLSearchParams(window.location.search);
+  const trackingId = params.get("OrderTrackingId");
+  const merchantRef = params.get("OrderMerchantReference");
+  const errorParam = params.get("error");
+  const statusParam = params.get("status");
+
+  if (trackingId && merchantRef) {
+    /* Pesapal redirected back — check status then redirect to success */
+    customerNode.textContent = "Verifying your payment with Pesapal...";
+    payButton.style.display = "none";
+    if (pesapalContainer) pesapalContainer.style.display = "none";
+
+    apiRequest(`/pesapal/status/${encodeURIComponent(trackingId)}`)
+      .then(status => {
+        if (status.statusCode === 1) {
+          /* Payment success */
+          saveCart([]);
+          localStorage.removeItem(CHECKOUT_KEY);
+          window.location.href = `success.html?ref=${encodeURIComponent(merchantRef)}&tracking=${encodeURIComponent(trackingId)}`;
+        } else {
+          customerNode.textContent = "";
+          const message = document.getElementById("payment-message");
+          if (message) message.textContent = `Payment ${status.statusDescription || "not completed"}. You may try again.`;
+          payButton.style.display = "";
+          payButton.textContent = "Retry Payment";
+        }
+      })
+      .catch(() => {
+        /* Fallback: still redirect to success since Pesapal did callback */
+        saveCart([]);
+        localStorage.removeItem(CHECKOUT_KEY);
+        window.location.href = `success.html?ref=${encodeURIComponent(merchantRef)}&tracking=${encodeURIComponent(trackingId)}`;
+      });
+    return;
+  }
+
+  if (errorParam || statusParam) {
+    const message = document.getElementById("payment-message");
+    if (message) message.textContent = `Payment ${statusParam || "issue"}: ${errorParam || "Please try again."}`;
   }
 
   const draft = getCheckoutDraft();
@@ -638,18 +681,19 @@ async function submitOrder() {
   const totals = cartTotals();
   const payButton = document.getElementById("complete-payment");
   const message = document.getElementById("payment-message");
-  const customerNode = document.getElementById("payment-customer");
-  const summaryContainer = document.getElementById("payment-summary");
+  const pesapalContainer = document.getElementById("pesapal-container");
+  const pesapalIframe = document.getElementById("pesapal-iframe");
 
-  if (!draft || totals.items.length === 0 || !payButton || !message || !customerNode || !summaryContainer) {
+  if (!draft || totals.items.length === 0 || !payButton || !message) {
     return;
   }
 
   payButton.disabled = true;
-  message.textContent = "Processing payment...";
+  message.textContent = "Connecting to Pesapal...";
 
   try {
-    const payload = await apiRequest("/orders", {
+    /* Try Pesapal payment flow */
+    const payload = await apiRequest("/pesapal/initiate", {
       method: "POST",
       body: JSON.stringify({
         ...draft,
@@ -660,17 +704,51 @@ async function submitOrder() {
       })
     });
 
-    const orderRef = payload.orderNumber;
-    saveCart([]);
-    localStorage.removeItem(CHECKOUT_KEY);
-    window.location.href = `success.html?ref=${encodeURIComponent(orderRef)}`;
+    if (payload.redirectUrl) {
+      message.textContent = "Loading secure payment form...";
+
+      /* Show Pesapal inside iframe for seamless experience */
+      if (pesapalContainer && pesapalIframe) {
+        pesapalIframe.src = payload.redirectUrl;
+        pesapalContainer.style.display = "block";
+        payButton.style.display = "none";
+        message.textContent = "Complete your payment in the form below. You will be redirected automatically.";
+
+        const refNode = document.getElementById("payment-ref");
+        if (refNode) refNode.textContent = `Order: ${payload.orderNumber}`;
+      } else {
+        /* Fallback: redirect to Pesapal payment page */
+        window.location.href = payload.redirectUrl;
+      }
+    } else {
+      throw new Error("No payment URL received.");
+    }
   } catch (error) {
-    const fallbackOrderRef = persistFallbackOrder(draft, totals);
-    saveCart([]);
-    localStorage.removeItem(CHECKOUT_KEY);
-    window.location.href = `success.html?ref=${encodeURIComponent(fallbackOrderRef)}&demo=1`;
-  } finally {
-    payButton.disabled = true;
+    /* Fallback: use the original order-only flow */
+    message.textContent = "Pesapal unavailable. Processing order directly...";
+
+    try {
+      const fallbackPayload = await apiRequest("/orders", {
+        method: "POST",
+        body: JSON.stringify({
+          ...draft,
+          items: totals.items.map((item) => ({
+            id: item.id,
+            quantity: item.quantity
+          }))
+        })
+      });
+
+      const orderRef = fallbackPayload.orderNumber;
+      saveCart([]);
+      localStorage.removeItem(CHECKOUT_KEY);
+      window.location.href = `success.html?ref=${encodeURIComponent(orderRef)}`;
+    } catch (fallbackError) {
+      const fallbackOrderRef = persistFallbackOrder(draft, totals);
+      saveCart([]);
+      localStorage.removeItem(CHECKOUT_KEY);
+      window.location.href = `success.html?ref=${encodeURIComponent(fallbackOrderRef)}&demo=1`;
+    }
   }
 }
 
@@ -877,6 +955,7 @@ function renderSuccessPage() {
   const params = new URLSearchParams(window.location.search);
   const ref = params.get("ref") || "N/A";
   const isDemo = params.get("demo") === "1";
+  const trackingId = params.get("tracking") || "";
 
   container.innerHTML = `
     <div class="success-container">
@@ -885,7 +964,9 @@ function renderSuccessPage() {
       <p style="color:var(--muted);margin:0 0 1.5rem;">Thank you for shopping with SnapShop. Your order has been placed successfully.</p>
       <div class="success-details">
         <div class="summary-line"><span>Order Reference</span><strong>${ref}</strong></div>
+        ${trackingId ? `<div class="summary-line"><span>Pesapal Tracking</span><strong>${trackingId.slice(0,8)}...</strong></div>` : ""}
         <div class="summary-line"><span>Status</span><strong>${isDemo ? "Demo Order" : "Confirmed"}</strong></div>
+        <div class="summary-line"><span>Payment</span><strong>${trackingId ? "Paid via Pesapal" : isDemo ? "Pending" : "Received"}</strong></div>
         <div class="summary-line"><span>Date</span><strong>${new Date().toLocaleDateString("en-UG", { year: "numeric", month: "long", day: "numeric" })}</strong></div>
       </div>
       ${isDemo ? '<p style="color:var(--muted);font-size:0.9rem;">This order was saved locally because the backend was unavailable.</p>' : ""}

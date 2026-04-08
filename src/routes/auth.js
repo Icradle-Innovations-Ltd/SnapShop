@@ -1,5 +1,5 @@
 const express = require("express");
-const { registerUser, loginUser } = require("../services/storeService");
+const { registerUser, loginUser, updateUserProfile, changeUserPassword } = require("../services/storeService");
 const { assertEmail, assertNonEmptyString, assertPassword } = require("../utils/validation");
 const { requireAuth } = require("../middleware/auth");
 
@@ -45,6 +45,26 @@ router.get("/me", requireAuth, (req, res) => {
   res.json({
     user: req.auth.user
   });
+});
+
+router.patch("/profile", requireAuth, async (req, res, next) => {
+  try {
+    const payload = await updateUserProfile(req.auth.userId, req.body);
+    res.json({ message: "Profile updated.", ...payload });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/password", requireAuth, async (req, res, next) => {
+  try {
+    assertPassword(req.body.currentPassword);
+    assertPassword(req.body.newPassword);
+    const result = await changeUserPassword(req.auth.userId, req.body.currentPassword, req.body.newPassword);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;

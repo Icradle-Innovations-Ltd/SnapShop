@@ -1,5 +1,12 @@
 const express = require("express");
-const { listPendingVendors, approveVendor } = require("../services/storeService");
+const {
+  listPendingVendors,
+  approveVendor,
+  rejectVendor,
+  listAllVendors,
+  toggleUserActive,
+  updateOrderStatus
+} = require("../services/storeService");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { prisma, hasDatabase } = require("../lib/prisma");
 const { memoryStore } = require("../store/memoryStore");
@@ -71,14 +78,54 @@ router.get("/users", async (req, res, next) => {
         name: u.name,
         email: u.email,
         role: u.role,
+        isActive: u.isActive !== false,
         createdAt: u.createdAt
       }));
       return res.json({ users });
     }
     const users = await prisma.user.findMany({
-      select: { id: true, name: true, email: true, role: true, createdAt: true }
+      select: { id: true, name: true, email: true, role: true, isActive: true, createdAt: true },
+      orderBy: { createdAt: "desc" }
     });
     res.json({ users });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/users/:id/status", async (req, res, next) => {
+  try {
+    const isActive = req.body.isActive === true;
+    const user = await toggleUserActive(req.params.id, isActive);
+    res.json({ message: `User ${isActive ? "activated" : "deactivated"}.`, user });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/vendors", async (req, res, next) => {
+  try {
+    const vendors = await listAllVendors();
+    res.json({ vendors });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/vendors/:vendorProfileId/reject", async (req, res, next) => {
+  try {
+    const vendor = await rejectVendor(req.params.vendorProfileId);
+    res.json({ message: "Vendor rejected.", vendor });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/orders/:id/status", async (req, res, next) => {
+  try {
+    const { status, note } = req.body;
+    const order = await updateOrderStatus(req.params.id, status, note);
+    res.json({ message: "Order status updated.", order });
   } catch (error) {
     next(error);
   }

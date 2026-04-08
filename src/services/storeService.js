@@ -987,6 +987,254 @@ async function approveVendor(vendorProfileId) {
   });
 }
 
+async function rejectVendor(vendorProfileId) {
+  if (!hasDatabase) {
+    const profile = memoryStore.vendorProfiles.find((item) => item.id === vendorProfileId);
+    if (!profile) {
+      throw new Error("Vendor profile not found.");
+    }
+    profile.status = "REJECTED";
+    profile.updatedAt = new Date().toISOString();
+    return profile;
+  }
+
+  return prisma.vendorProfile.update({
+    where: { id: vendorProfileId },
+    data: { status: "REJECTED" }
+  });
+}
+
+async function listAllVendors() {
+  if (!hasDatabase) {
+    return memoryStore.vendorProfiles.map((profile) => {
+      const user = memoryStore.users.find((item) => item.id === profile.userId);
+      const store = memoryStore.stores.find((s) => s.vendorProfileId === profile.id) || null;
+      return { ...profile, user: sanitizeUser(user), store };
+    });
+  }
+
+  const vendors = await prisma.vendorProfile.findMany({
+    include: { user: true, store: true },
+    orderBy: { createdAt: "desc" }
+  });
+
+  return vendors.map((v) => ({ ...v, user: sanitizeUser(v.user) }));
+}
+
+async function toggleUserActive(userId, isActive) {
+  if (!hasDatabase) {
+    const user = memoryStore.users.find((item) => item.id === userId);
+    if (!user) {
+      throw new Error("User not found.");
+    }
+    user.isActive = isActive;
+    user.updatedAt = new Date().toISOString();
+    return sanitizeUser(user);
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { isActive }
+  });
+  return sanitizeUser(updated);
+}
+
+async function updateUserProfile(userId, payload) {
+  if (!hasDatabase) {
+    const user = memoryStore.users.find((item) => item.id === userId);
+    if (!user) {
+      throw new Error("User not found.");
+    }
+    if (payload.name) user.name = payload.name.trim();
+    if (payload.phone !== undefined) {
+      const profile = memoryStore.customerProfiles.find((p) => p.userId === userId)
+        || memoryStore.vendorProfiles.find((p) => p.userId === userId);
+      if (profile) profile.phone = payload.phone.trim() || null;
+    }
+    user.updatedAt = new Date().toISOString();
+    return await buildAuthPayload(user);
+  }
+
+  const data = {};
+  if (payload.name) data.name = payload.name.trim();
+  const updated = await prisma.user.update({ where: { id: userId }, data });
+
+  if (payload.phone !== undefined) {
+    const role = updated.role;
+    if (role === "CUSTOMER") {
+      await prisma.customerProfile.updateMany({ where: { userId }, data: { phone: payload.phone.trim() || null } });
+    } else if (role === "VENDOR") {
+      await prisma.vendorProfile.updateMany({ where: { userId }, data: { phone: payload.phone.trim() || null } });
+    }
+  }
+
+  return await buildAuthPayload(updated);
+}
+
+async function changeUserPassword(userId, currentPassword, newPassword) {
+  let user;
+  if (!hasDatabase) {
+    user = memoryStore.users.find((item) => item.id === userId);
+  } else {
+    user = await prisma.user.findUnique({ where: { id: userId } });
+  }
+  if (!user) {
+    throw new Error("User not found.");
+  }
+  if (!verifyPassword(currentPassword, user.passwordHash)) {
+    throw new Error("Current password is incorrect.");
+  }
+  const newHash = hashPassword(newPassword);
+  if (!hasDatabase) {
+    user.passwordHash = newHash;
+    user.updatedAt = new Date().toISOString();
+  } else {
+    await prisma.user.update({ where: { id: userId }, data: { passwordHash: newHash } });
+  }
+  return { message: "Password changed successfully." };
+}
+
+async function updateOrderStatus(orderId, status, note) {
+  const validStatuses = ["PENDING", "PAID", "PROCESSING", "READY_FOR_PICKUP", "ASSIGNED_TO_AGENT", "IN_TRANSIT", "DELIVERED", "CANCELLED", "RETURN_REQUESTED"];
+  if (!validStatuses.includes(status)) {
+    throw new Error("Invalid order status.");
+  }
+
+  if (!hasDatabase) {
+    const order = memoryStore.orders.find((item) => item.id === orderId);
+    if (!order) {
+      throw new Error("Order not found.");
+    }
+    order.status = status;
+    order.updatedAt = new Date().toISOString();
+    memoryStore.orderStatusHistory.push({
+      id: `order-status-${memoryStore.orderStatusHistory.length + 1}`,
+      orderId: order.id,
+      status,
+      note: note || `Status changed to ${status}.`,
+      createdAt: new Date().toISOString()
+    });
+    return {
+      ...order,
+      statusHistory: memoryStore.orderStatusHistory.filter((e) => e.orderId === order.id)
+    };
+  }
+
+  const order = await prisma.order.update({
+    where: { id: orderId },
+    data: {
+      status,
+      statusHistory: {
+        create: { status, note: note || `Status changed to ${status}.` }
+      }
+    },
+    include: { items: true, statusHistory: { orderBy: { createdAt: "asc" } } }
+  });
+  return order;
+}
+
+async function deleteCustomerAddress(userId, addressId) {
+  const user = await findUserById(userId);
+  if (!user?.customerProfile) {
+    throw new Error("Customer profile not found.");
+  }
+
+  if (!hasDatabase) {
+    const index = memoryStore.addresses.findIndex(
+      (a) => a.id === addressId && a.customerProfileId === user.customerProfile.id
+    );
+    if (index === -1) {
+      throw new Error("Address not found.");
+    }
+    memoryStore.addresses.splice(index, 1);
+    return { message: "Address deleted." };
+  }
+
+  const address = await prisma.address.findFirst({
+    where: { id: addressId, customerProfileId: user.customerProfile.id }
+  });
+  if (!address) {
+    throw new Error("Address not found.");
+  }
+  await prisma.address.delete({ where: { id: addressId } });
+  return { message: "Address deleted." };
+}
+
+async function listVendorOrders(userId) {
+  const vendorProfile = await getVendorProfileByUser(userId);
+  if (!vendorProfile?.store) {
+    return [];
+  }
+
+  if (!hasDatabase) {
+    return memoryStore.orders
+      .filter((order) => order.storeId === vendorProfile.store.id)
+      .map((order) => ({
+        ...order,
+        statusHistory: memoryStore.orderStatusHistory.filter((e) => e.orderId === order.id)
+      }));
+  }
+
+  return prisma.order.findMany({
+    where: { storeId: vendorProfile.store.id },
+    include: {
+      items: true,
+      statusHistory: { orderBy: { createdAt: "asc" } }
+    },
+    orderBy: { createdAt: "desc" }
+  });
+}
+
+async function updateVendorOrderStatus(userId, orderId, status, note) {
+  const vendorProfile = await getVendorProfileByUser(userId);
+  if (!vendorProfile?.store) {
+    throw new Error("Vendor store not found.");
+  }
+
+  const validStatuses = ["PROCESSING", "READY_FOR_PICKUP", "IN_TRANSIT", "DELIVERED", "CANCELLED"];
+  if (!validStatuses.includes(status)) {
+    throw new Error("Invalid status for vendor.");
+  }
+
+  if (!hasDatabase) {
+    const order = memoryStore.orders.find((o) => o.id === orderId && o.storeId === vendorProfile.store.id);
+    if (!order) {
+      throw new Error("Order not found in your store.");
+    }
+    order.status = status;
+    order.updatedAt = new Date().toISOString();
+    memoryStore.orderStatusHistory.push({
+      id: `order-status-${memoryStore.orderStatusHistory.length + 1}`,
+      orderId: order.id,
+      status,
+      note: note || `Vendor updated status to ${status}.`,
+      createdAt: new Date().toISOString()
+    });
+    return {
+      ...order,
+      statusHistory: memoryStore.orderStatusHistory.filter((e) => e.orderId === order.id)
+    };
+  }
+
+  const order = await prisma.order.findFirst({
+    where: { id: orderId, storeId: vendorProfile.store.id }
+  });
+  if (!order) {
+    throw new Error("Order not found in your store.");
+  }
+
+  return prisma.order.update({
+    where: { id: orderId },
+    data: {
+      status,
+      statusHistory: {
+        create: { status, note: note || `Vendor updated status to ${status}.` }
+      }
+    },
+    include: { items: true, statusHistory: { orderBy: { createdAt: "asc" } } }
+  });
+}
+
 module.exports = {
   listCategories,
   listProducts,
@@ -1007,5 +1255,14 @@ module.exports = {
   getCustomerOrder,
   listPendingVendors,
   approveVendor,
+  rejectVendor,
+  listAllVendors,
+  toggleUserActive,
+  updateUserProfile,
+  changeUserPassword,
+  updateOrderStatus,
+  deleteCustomerAddress,
+  listVendorOrders,
+  updateVendorOrderStatus,
   POLL_CHOICES
 };

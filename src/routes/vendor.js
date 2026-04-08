@@ -3,7 +3,9 @@ const {
   createVendorStore,
   listVendorProducts,
   createVendorProduct,
-  updateVendorProduct
+  updateVendorProduct,
+  listVendorOrders,
+  updateVendorOrderStatus
 } = require("../services/storeService");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { assertNonEmptyString } = require("../utils/validation");
@@ -60,6 +62,25 @@ router.patch("/products/:id", async (req, res, next) => {
       message: "Product updated successfully.",
       product
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/orders", async (req, res, next) => {
+  try {
+    const orders = await listVendorOrders(req.auth.user.id);
+    res.json({ orders });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/orders/:id/status", async (req, res, next) => {
+  try {
+    const { status, note } = req.body;
+    const order = await updateVendorOrderStatus(req.auth.user.id, req.params.id, status, note);
+    res.json({ message: "Order status updated.", order });
   } catch (error) {
     next(error);
   }

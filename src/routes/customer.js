@@ -1,5 +1,5 @@
 const express = require("express");
-const { addCustomerAddress, listCustomerOrders, getCustomerOrder } = require("../services/storeService");
+const { addCustomerAddress, listCustomerOrders, getCustomerOrder, deleteCustomerAddress } = require("../services/storeService");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { assertNonEmptyString } = require("../utils/validation");
 
@@ -42,6 +42,15 @@ router.get("/orders/:orderNumber", async (req, res, next) => {
     return res.json({ order });
   } catch (error) {
     return next(error);
+  }
+});
+
+router.delete("/addresses/:id", async (req, res, next) => {
+  try {
+    const result = await deleteCustomerAddress(req.auth.user.id, req.params.id);
+    res.json(result);
+  } catch (error) {
+    next(error);
   }
 });
 

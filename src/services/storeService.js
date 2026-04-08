@@ -1766,6 +1766,137 @@ async function adminUpdateStore(storeId, payload) {
   });
 }
 
+/* ────────────────────────── Cart Functions ────────────────────────── */
+
+async function getCartItems(userId) {
+  if (!hasDatabase) {
+    const profile = memoryStore.customerProfiles.find((p) => p.userId === userId);
+    if (!profile) return [];
+    return memoryStore.cartItems
+      .filter((ci) => ci.customerProfileId === profile.id)
+      .map((ci) => {
+        const product = memoryStore.products.find((p) => p.id === ci.productId);
+        return { id: ci.productId, quantity: ci.quantity, productName: product?.name || "Unknown" };
+      });
+  }
+
+  const profile = await prisma.customerProfile.findUnique({ where: { userId } });
+  if (!profile) return [];
+
+  const items = await prisma.cartItem.findMany({
+    where: { customerProfileId: profile.id },
+    include: { product: { select: { id: true, name: true, slug: true } } },
+    orderBy: { createdAt: "asc" }
+  });
+
+  return items.map((ci) => ({
+    id: ci.product?.slug || ci.productId,
+    quantity: ci.quantity,
+    productName: ci.product?.name || "Unknown"
+  }));
+}
+
+async function syncCart(userId, clientItems) {
+  if (!Array.isArray(clientItems)) return [];
+
+  if (!hasDatabase) {
+    const profile = memoryStore.customerProfiles.find((p) => p.userId === userId);
+    if (!profile) return clientItems;
+
+    /* Merge: server items + client items (client wins on conflict) */
+    const serverItems = memoryStore.cartItems.filter((ci) => ci.customerProfileId === profile.id);
+    const merged = new Map();
+
+    serverItems.forEach((si) => merged.set(si.productId, si.quantity));
+    clientItems.forEach((ci) => {
+      const pid = ci.id || ci.productId;
+      if (ci.quantity > 0) {
+        merged.set(pid, (merged.get(pid) || 0) + ci.quantity);
+      }
+    });
+
+    /* Remove old and write merged */
+    memoryStore.cartItems = memoryStore.cartItems.filter((ci) => ci.customerProfileId !== profile.id);
+
+    const result = [];
+    for (const [productId, quantity] of merged) {
+      if (quantity <= 0) continue;
+      memoryStore.cartItems.push({
+        id: `cart-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        customerProfileId: profile.id,
+        productId,
+        quantity,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      const product = memoryStore.products.find((p) => p.id === productId || p.slug === productId);
+      result.push({ id: product?.slug || productId, quantity, productName: product?.name || "Unknown" });
+    }
+    return result;
+  }
+
+  const profile = await prisma.customerProfile.findUnique({ where: { userId } });
+  if (!profile) return clientItems;
+
+  /* Resolve product slugs/ids to actual product IDs */
+  const resolvedItems = [];
+  for (const ci of clientItems) {
+    if (!ci.id && !ci.productId) continue;
+    const identifier = ci.id || ci.productId;
+    const product = await prisma.product.findFirst({
+      where: { OR: [{ id: identifier }, { slug: identifier }] }
+    });
+    if (product && ci.quantity > 0) {
+      resolvedItems.push({ productId: product.id, quantity: ci.quantity, slug: product.slug, name: product.name });
+    }
+  }
+
+  /* Get existing server cart */
+  const serverItems = await prisma.cartItem.findMany({
+    where: { customerProfileId: profile.id },
+    include: { product: { select: { id: true, slug: true, name: true } } }
+  });
+
+  /* Merge: combine quantities, client items add to server */
+  const merged = new Map();
+  serverItems.forEach((si) => merged.set(si.productId, { quantity: si.quantity, slug: si.product?.slug, name: si.product?.name }));
+  resolvedItems.forEach((ci) => {
+    const existing = merged.get(ci.productId);
+    if (existing) {
+      merged.set(ci.productId, { quantity: existing.quantity + ci.quantity, slug: ci.slug, name: ci.name });
+    } else {
+      merged.set(ci.productId, { quantity: ci.quantity, slug: ci.slug, name: ci.name });
+    }
+  });
+
+  /* Delete old items and re-create merged set */
+  await prisma.cartItem.deleteMany({ where: { customerProfileId: profile.id } });
+
+  const result = [];
+  for (const [productId, info] of merged) {
+    if (info.quantity <= 0) continue;
+    await prisma.cartItem.create({
+      data: { customerProfileId: profile.id, productId, quantity: info.quantity }
+    });
+    result.push({ id: info.slug || productId, quantity: info.quantity, productName: info.name || "Unknown" });
+  }
+
+  return result;
+}
+
+async function clearCartItems(userId) {
+  if (!hasDatabase) {
+    const profile = memoryStore.customerProfiles.find((p) => p.userId === userId);
+    if (!profile) return;
+    memoryStore.cartItems = memoryStore.cartItems.filter((ci) => ci.customerProfileId !== profile.id);
+    return;
+  }
+
+  const profile = await prisma.customerProfile.findUnique({ where: { userId } });
+  if (!profile) return;
+  await prisma.cartItem.deleteMany({ where: { customerProfileId: profile.id } });
+}
+
 module.exports = {
   listCategories,
   createCategory,
@@ -1810,5 +1941,8 @@ module.exports = {
   adminDeleteProduct,
   adminGetStoreDetails,
   adminUpdateStore,
-  POLL_CHOICES
+  POLL_CHOICES,
+  getCartItems,
+  syncCart,
+  clearCartItems
 };

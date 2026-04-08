@@ -144,8 +144,13 @@
         });
         setSession(payload.token, payload.user);
         renderNav();
+        /* Merge local cart with server cart */
+        if (typeof window.mergeAndSyncCart === "function") {
+          await window.mergeAndSyncCart();
+        }
         message.textContent = "Login successful. Redirecting...";
-        window.location.href = "dashboard.html";
+        const returnUrl = new URLSearchParams(window.location.search).get("returnUrl");
+        window.location.href = returnUrl || "dashboard.html";
       } catch (error) {
         message.textContent = error.message;
       }
@@ -208,7 +213,12 @@
         });
         setSession(payload.token, payload.user);
         renderNav();
-        window.location.href = "dashboard.html";
+        /* Merge local cart with server cart */
+        if (typeof window.mergeAndSyncCart === "function") {
+          await window.mergeAndSyncCart();
+        }
+        const returnUrl = new URLSearchParams(window.location.search).get("returnUrl");
+        window.location.href = returnUrl || "dashboard.html";
       } catch (error) {
         message.textContent = error.message;
       }
@@ -262,6 +272,7 @@
       { key: "users", label: "Users" },
       { key: "vendors", label: "Vendors" },
       { key: "orders", label: "Orders" },
+      { key: "payments", label: "Payments" },
       { key: "products", label: "Products" },
       { key: "categories", label: "Categories" },
       { key: "stores", label: "Stores" },
@@ -316,10 +327,20 @@
           </article>
         </section>`;
     } else if (activeTab === "users") {
+      const admins = allUsers.filter((u) => u.role === "ADMIN");
+      const vendors = allUsers.filter((u) => u.role === "VENDOR");
+      const customers = allUsers.filter((u) => u.role === "CUSTOMER");
+      const inactive = allUsers.filter((u) => u.isActive === false);
       tabContent = `
         <section class="card dashboard-section">
           <h2>User Management</h2>
-          <p class="dashboard-meta">${allUsers.length} registered user${allUsers.length !== 1 ? "s" : ""}</p>
+          <div class="metric-strip" style="margin-bottom:1rem;">
+            ${metric("Total Users", String(allUsers.length), "👥")}
+            ${metric("Admins", String(admins.length), "🛡️")}
+            ${metric("Vendors", String(vendors.length), "🏪")}
+            ${metric("Customers", String(customers.length), "🛒")}
+            ${metric("Inactive", String(inactive.length), "🚫")}
+          </div>
           <div class="dash-table-wrap">
             <table class="dash-table">
               <thead>
@@ -337,7 +358,7 @@
                   <tr>
                     <td data-label="Name">${safe(u.name)}</td>
                     <td data-label="Email">${safe(u.email)}</td>
-                    <td data-label="Role"><span class="status-pill">${safe(roleLabel(u.role))}</span></td>
+                    <td data-label="Role"><span class="status-pill status-${(u.role || "").toLowerCase()}">${safe(roleLabel(u.role))}</span></td>
                     <td data-label="Status"><span class="status-pill ${u.isActive !== false ? "status-active" : "status-inactive"}">${u.isActive !== false ? "Active" : "Inactive"}</span></td>
                     <td data-label="Joined">${formatDate(u.createdAt)}</td>
                     <td data-label="Action">
@@ -377,10 +398,18 @@
           </div>
         </section>`;
     } else if (activeTab === "orders") {
+      const paidOrders = allOrders.filter((o) => o.status === "PAID" || o.status === "PROCESSING" || o.status === "DELIVERED");
+      const pendingOrders = allOrders.filter((o) => o.status === "PENDING");
+      const cancelledOrders = allOrders.filter((o) => o.status === "CANCELLED");
       tabContent = `
         <section class="card dashboard-section">
           <h2>Order Management</h2>
-          <p class="dashboard-meta">${allOrders.length} total order${allOrders.length !== 1 ? "s" : ""}</p>
+          <div class="metric-strip" style="margin-bottom:1rem;">
+            ${metric("Total", String(allOrders.length), "📦")}
+            ${metric("Pending", String(pendingOrders.length), "⏳")}
+            ${metric("Paid/Active", String(paidOrders.length), "✅")}
+            ${metric("Cancelled", String(cancelledOrders.length), "❌")}
+          </div>
           <div class="dash-table-wrap">
             <table class="dash-table">
               <thead>
@@ -388,24 +417,90 @@
                   <th>Order #</th>
                   <th>Customer</th>
                   <th>Total</th>
+                  <th>Payment</th>
                   <th>Status</th>
                   <th>Date</th>
                   <th>Update Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 ${allOrders.length ? allOrders.map((o) => `
                   <tr>
-                    <td data-label="Order #"><strong>${safe(o.orderNumber)}</strong></td>
-                    <td data-label="Customer">${safe(o.customer?.name || o.customerName || "Guest")}</td>
+                    <td data-label="Order #"><strong>${safe(o.orderNumber)}</strong>${o.pesapalTrackingId ? `<br><small style="color:var(--muted);">Pesapal: ${safe(o.pesapalTrackingId.slice(0,12))}...</small>` : ""}</td>
+                    <td data-label="Customer">${safe(o.customer?.name || o.customerName || "Guest")}<br><small style="color:var(--muted);">${safe(o.email || "")}</small></td>
                     <td data-label="Total">${formatMoney(o.total)}</td>
+                    <td data-label="Payment">
+                      <span class="status-pill">${safe(o.paymentMethod || "N/A")}</span>
+                      ${o.pesapalConfirmationCode ? `<br><small style="color:var(--muted);">Ref: ${safe(o.pesapalConfirmationCode)}</small>` : ""}
+                    </td>
                     <td data-label="Status"><span class="status-pill status-${(o.status || "").toLowerCase()}">${safe(roleLabel(o.status))}</span></td>
                     <td data-label="Date">${formatDate(o.createdAt)}</td>
                     <td data-label="Update Status">
                       ${statusSelect(o.status, o.id, orderStatuses)}
                     </td>
+                    <td data-label="Actions">
+                      <div class="dash-item-actions" style="flex-direction:column;gap:0.3rem;">
+                        ${o.pesapalTrackingId ? `<button class="button button-sm button-secondary" data-pesapal-check-status="${safe(o.pesapalTrackingId)}">Check Payment</button>` : ""}
+                        ${(o.status === "PAID" || o.status === "PROCESSING") && o.pesapalTrackingId ? `<button class="button button-sm button-danger" data-pesapal-refund="${safe(o.pesapalTrackingId)}" data-order-number="${safe(o.orderNumber)}" data-amount="${o.total}">Refund</button>` : ""}
+                        ${o.status === "PENDING" && o.pesapalTrackingId ? `<button class="button button-sm button-danger" data-pesapal-cancel="${safe(o.pesapalTrackingId)}" data-order-number="${safe(o.orderNumber)}">Cancel Payment</button>` : ""}
+                      </div>
+                    </td>
                   </tr>
-                `).join("") : `<tr><td colspan="6" class="dashboard-empty">No orders yet.</td></tr>`}
+                `).join("") : `<tr><td colspan="8" class="dashboard-empty">No orders yet.</td></tr>`}
+              </tbody>
+            </table>
+          </div>
+        </section>`;
+    } else if (activeTab === "payments") {
+      const pesapalOrders = allOrders.filter((o) => o.pesapalTrackingId);
+      const paidTotal = allOrders.filter((o) => o.status !== "PENDING" && o.status !== "CANCELLED").reduce((s, o) => s + (o.total || 0), 0);
+      const pendingTotal = allOrders.filter((o) => o.status === "PENDING").reduce((s, o) => s + (o.total || 0), 0);
+      tabContent = `
+        <section class="card dashboard-section">
+          <h2>Payment Overview</h2>
+          <div class="metric-strip">
+            ${metric("Pesapal Transactions", String(pesapalOrders.length), "💳")}
+            ${metric("Revenue Collected", formatMoney(paidTotal), "💰")}
+            ${metric("Pending Payments", formatMoney(pendingTotal), "⏳")}
+            ${metric("Total Orders", String(allOrders.length), "📦")}
+          </div>
+        </section>
+        <section class="card dashboard-section">
+          <h2>Pesapal Transactions</h2>
+          <div class="dash-item-actions" style="margin-bottom:1rem;">
+            <button class="button button-sm button-secondary" id="pesapal-ipn-list-btn">View Registered IPNs</button>
+          </div>
+          <div id="pesapal-ipn-list" style="display:none;margin-bottom:1rem;"></div>
+          <div class="dash-table-wrap">
+            <table class="dash-table">
+              <thead>
+                <tr>
+                  <th>Order #</th>
+                  <th>Tracking ID</th>
+                  <th>Confirmation</th>
+                  <th>Amount</th>
+                  <th>Payment Method</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${pesapalOrders.length ? pesapalOrders.map((o) => `
+                  <tr>
+                    <td data-label="Order #"><strong>${safe(o.orderNumber)}</strong></td>
+                    <td data-label="Tracking ID"><small>${safe(o.pesapalTrackingId || "N/A")}</small></td>
+                    <td data-label="Confirmation">${safe(o.pesapalConfirmationCode || "—")}</td>
+                    <td data-label="Amount">${formatMoney(o.total)}</td>
+                    <td data-label="Method">${safe(o.paymentMethod || "Pesapal")}</td>
+                    <td data-label="Status"><span class="status-pill status-${(o.status || "").toLowerCase()}">${safe(roleLabel(o.status))}</span></td>
+                    <td data-label="Date">${formatDate(o.createdAt)}</td>
+                    <td data-label="Actions">
+                      <button class="button button-sm button-secondary" data-pesapal-check-status="${safe(o.pesapalTrackingId)}">Check</button>
+                    </td>
+                  </tr>
+                `).join("") : `<tr><td colspan="8" class="dashboard-empty">No Pesapal transactions yet.</td></tr>`}
               </tbody>
             </table>
           </div>
@@ -866,16 +961,17 @@
                 </div>
                 <p class="dashboard-meta">${formatMoney(o.total)} &middot; ${safe(o.deliveryOption)} &middot; ${safe(o.paymentMethod)}</p>
                 <p class="dashboard-meta">Placed: ${formatDate(o.createdAt)}</p>
+                ${o.pesapalTrackingId ? `<p class="dashboard-meta">Payment Ref: ${safe(o.pesapalTrackingId.slice(0,12))}...${o.pesapalConfirmationCode ? ` &middot; Confirmation: ${safe(o.pesapalConfirmationCode)}` : ""}</p>` : ""}
                 ${(o.items && o.items.length) ? `
                   <div class="dash-order-items">
-                    ${o.items.map((it) => `<span class="dash-order-item-tag">${safe(it.productName)} &times; ${it.quantity}</span>`).join("")}
+                    ${o.items.map((it) => `<span class="dash-order-item-tag">${safe(it.productName)} &times; ${it.quantity} &middot; ${formatMoney(it.lineTotal)}</span>`).join("")}
                   </div>
+                  <p class="dashboard-meta" style="margin-top:0.25rem;">Service Fee: ${formatMoney(o.serviceFee)}</p>
                 ` : ""}
-                ${["PAID", "PROCESSING"].includes(o.status) ? `
-                  <div class="dash-item-actions" style="margin-top:0.5rem;">
-                    <button class="button button-sm button-danger" data-cancel-order="${safe(o.orderNumber)}">Cancel Order</button>
-                  </div>
-                ` : ""}
+                <div class="dash-item-actions" style="margin-top:0.5rem;">
+                  ${["PAID", "PROCESSING"].includes(o.status) ? `<button class="button button-sm button-danger" data-cancel-order="${safe(o.orderNumber)}">Cancel Order</button>` : ""}
+                  ${o.pesapalTrackingId ? `<button class="button button-sm button-secondary" data-pesapal-check-status="${safe(o.pesapalTrackingId)}">Check Payment Status</button>` : ""}
+                </div>
                 <div class="tracking-timeline">
                   ${(o.statusHistory || []).map((entry, idx, arr) => {
                     const isCurrent = idx === arr.length - 1;
@@ -1604,6 +1700,108 @@
           await renderDashboard();
         } catch (error) {
           toast(error.message);
+        }
+        return;
+      }
+
+      /* Pesapal: Check payment status */
+      const checkStatus = event.target.closest("[data-pesapal-check-status]");
+      if (checkStatus) {
+        const trackingId = checkStatus.dataset.pesapalCheckStatus;
+        checkStatus.disabled = true;
+        checkStatus.textContent = "Checking...";
+        try {
+          const result = await request(`/pesapal/status/${encodeURIComponent(trackingId)}`);
+          const desc = result.statusDescription || result.payment_status_description || "Unknown";
+          const code = result.statusCode ?? result.payment_status_code ?? "N/A";
+          const method = result.paymentMethod || result.payment_method || "";
+          alert(`Payment Status: ${desc}\nStatus Code: ${code}${method ? "\nMethod: " + method : ""}\nAmount: ${result.amount || "N/A"}`);
+        } catch (error) {
+          alert("Could not check payment status: " + error.message);
+        }
+        checkStatus.disabled = false;
+        checkStatus.textContent = checkStatus.closest("[data-label]") ? "Check Payment" : "Check Payment Status";
+        return;
+      }
+
+      /* Pesapal: Refund (Admin only) */
+      const refundBtn = event.target.closest("[data-pesapal-refund]");
+      if (refundBtn) {
+        const orderNumber = refundBtn.dataset.orderNumber || "";
+        const amount = refundBtn.dataset.amount || "0";
+        if (!confirm(`Refund order ${orderNumber}?\nAmount: UGX ${Number(amount).toLocaleString()}\nThis action cannot be undone.`)) return;
+        refundBtn.disabled = true;
+        refundBtn.textContent = "Processing...";
+        try {
+          const result = await request("/pesapal/refund", {
+            method: "POST",
+            body: JSON.stringify({ orderNumber, amount: Number(amount), remarks: "Admin refund for order " + orderNumber })
+          });
+          toast(result.message || "Refund submitted.");
+          await renderDashboard();
+        } catch (error) {
+          toast("Refund failed: " + error.message);
+          refundBtn.disabled = false;
+          refundBtn.textContent = "Refund";
+        }
+        return;
+      }
+
+      /* Pesapal: Cancel payment (Admin only) */
+      const cancelPayment = event.target.closest("[data-pesapal-cancel]");
+      if (cancelPayment) {
+        const orderNumber = cancelPayment.dataset.orderNumber || "";
+        if (!confirm(`Cancel Pesapal payment for order ${orderNumber}?`)) return;
+        cancelPayment.disabled = true;
+        cancelPayment.textContent = "Cancelling...";
+        try {
+          const result = await request("/pesapal/cancel", {
+            method: "POST",
+            body: JSON.stringify({ orderNumber })
+          });
+          toast(result.message || "Payment cancelled.");
+          await renderDashboard();
+        } catch (error) {
+          toast("Cancel failed: " + error.message);
+          cancelPayment.disabled = false;
+          cancelPayment.textContent = "Cancel Payment";
+        }
+        return;
+      }
+
+      /* Pesapal: View IPN List (Admin) */
+      if (event.target.id === "pesapal-ipn-list-btn") {
+        const container = document.getElementById("pesapal-ipn-list");
+        if (!container) return;
+        if (container.style.display !== "none") {
+          container.style.display = "none";
+          return;
+        }
+        container.innerHTML = "<p>Loading IPN registrations...</p>";
+        container.style.display = "";
+        try {
+          const result = await request("/pesapal/ipn-list");
+          const ipns = result.ipns || result.data || [];
+          if (Array.isArray(ipns) && ipns.length) {
+            container.innerHTML = `
+              <div class="dash-table-wrap">
+                <table class="dash-table">
+                  <thead><tr><th>IPN ID</th><th>URL</th><th>Type</th><th>Status</th></tr></thead>
+                  <tbody>${ipns.map((ipn) => `
+                    <tr>
+                      <td data-label="IPN ID">${safe(ipn.ipn_id || ipn.id || "N/A")}</td>
+                      <td data-label="URL"><small>${safe(ipn.url || ipn.ipn_notification_url || "N/A")}</small></td>
+                      <td data-label="Type">${safe(ipn.ipn_notification_type || ipn.notification_type || "N/A")}</td>
+                      <td data-label="Status"><span class="status-pill">${safe(ipn.ipn_status || ipn.status || "N/A")}</span></td>
+                    </tr>
+                  `).join("")}</tbody>
+                </table>
+              </div>`;
+          } else {
+            container.innerHTML = "<p class='dashboard-meta'>No IPN registrations found.</p>";
+          }
+        } catch (error) {
+          container.innerHTML = `<p class="form-message" style="color:var(--color-danger);">Failed to load IPNs: ${safe(error.message)}</p>`;
         }
         return;
       }

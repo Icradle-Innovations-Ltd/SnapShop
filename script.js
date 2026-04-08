@@ -220,7 +220,81 @@ function getCart() {
 function saveCart(cart) {
   localStorage.setItem(CART_KEY, JSON.stringify(cart));
   updateCartIndicators();
+  syncCartToServer();
 }
+
+/* --- Server-side cart sync (for logged-in customers) --- */
+let _syncTimer = null;
+function syncCartToServer() {
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  if (!token) return;
+  clearTimeout(_syncTimer);
+  _syncTimer = setTimeout(() => {
+    const cart = getCart();
+    if (cart.length === 0) {
+      /* Empty cart = clear server cart */
+      fetch(`${API_BASE}/customer/cart`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(() => {});
+    } else {
+      fetch(`${API_BASE}/customer/cart/sync`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ items: cart })
+      }).catch(() => {});
+    }
+  }, 500);
+}
+
+async function loadCartFromServer() {
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  if (!token) return;
+  try {
+    const res = await fetch(`${API_BASE}/customer/cart`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data.items) && data.items.length > 0) {
+      const localCart = getCart();
+      const merged = new Map();
+      /* Server items first */
+      data.items.forEach(i => merged.set(i.id, i.quantity));
+      /* Local items merge (add quantities for items not on server) */
+      localCart.forEach(i => {
+        if (merged.has(i.id)) return; /* server wins */
+        merged.set(i.id, i.quantity);
+      });
+      const finalCart = Array.from(merged, ([id, quantity]) => ({ id, quantity }));
+      localStorage.setItem(CART_KEY, JSON.stringify(finalCart));
+      updateCartIndicators();
+    }
+  } catch (e) { /* silent */ }
+}
+
+async function mergeAndSyncCart() {
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  if (!token) return;
+  const localCart = getCart();
+  try {
+    const res = await fetch(`${API_BASE}/customer/cart/sync`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ items: localCart })
+    });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (Array.isArray(data.items)) {
+      localStorage.setItem(CART_KEY, JSON.stringify(data.items.map(i => ({ id: i.id, quantity: i.quantity }))));
+      updateCartIndicators();
+    }
+  } catch (e) { /* silent */ }
+}
+
+/* Expose for auth-ui.js to call after login/register */
+window.mergeAndSyncCart = mergeAndSyncCart;
+window.loadCartFromServer = loadCartFromServer;
 
 function getCheckoutDraft() {
   try {
@@ -360,6 +434,14 @@ function clearCart() {
     if (!confirmed) return;
     saveCart([]);
     localStorage.removeItem(CHECKOUT_KEY);
+    /* Also clear server-side cart */
+    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+    if (token) {
+      fetch(`${API_BASE}/customer/cart`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` }
+      }).catch(() => {});
+    }
     renderCartPage();
     renderCheckoutPage();
     renderPaymentPage();
@@ -558,6 +640,23 @@ function renderCheckoutPage() {
   if (!summaryContainer || !form) {
     return;
   }
+
+  /* ── Require login to checkout ── */
+  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+  if (!token) {
+    summaryContainer.innerHTML = `
+      <div class="empty-state">
+        <span class="empty-state-icon">🔒</span>
+        <h2>Login Required</h2>
+        <p>You must be logged in to checkout. Your cart will be saved.</p>
+        <a class="button button-primary" href="login.html?returnUrl=checkout.html">Login</a>
+        <a class="button button-secondary" href="register.html?returnUrl=checkout.html">Register</a>
+      </div>
+    `;
+    form.style.display = "none";
+    return;
+  }
+  form.style.display = "";
 
   const totals = cartTotals();
   if (totals.items.length === 0) {
@@ -1087,6 +1186,8 @@ function renderSuccessPage() {
 async function bootstrap() {
   await loadProducts();
   setCurrentYear();
+  /* Load server cart if logged in */
+  await loadCartFromServer();
   updateCartIndicators();
   bindGlobalEvents();
   restorePollChoice();

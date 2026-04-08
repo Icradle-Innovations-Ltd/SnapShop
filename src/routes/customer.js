@@ -1,11 +1,42 @@
 const express = require("express");
-const { addCustomerAddress, listCustomerOrders, getCustomerOrder, deleteCustomerAddress, cancelCustomerOrder } = require("../services/storeService");
+const { addCustomerAddress, listCustomerOrders, getCustomerOrder, deleteCustomerAddress, cancelCustomerOrder, getCartItems, syncCart, clearCartItems } = require("../services/storeService");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { assertNonEmptyString } = require("../utils/validation");
 
 const router = express.Router();
 
 router.use(requireAuth, requireRole("CUSTOMER"));
+
+/* ── Cart endpoints ── */
+
+router.get("/cart", async (req, res, next) => {
+  try {
+    const items = await getCartItems(req.auth.user.id);
+    res.json({ items });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/cart/sync", async (req, res, next) => {
+  try {
+    const merged = await syncCart(req.auth.user.id, req.body.items || []);
+    res.json({ items: merged });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/cart", async (req, res, next) => {
+  try {
+    await clearCartItems(req.auth.user.id);
+    res.json({ message: "Cart cleared.", items: [] });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/* ── Addresses ── */
 
 router.post("/addresses", async (req, res, next) => {
   try {

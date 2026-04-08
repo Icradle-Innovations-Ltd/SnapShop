@@ -11,7 +11,8 @@ const memoryStore = {
   orderStatusHistory: [],
   contactMessages: [],
   pollVotes: POLL_CHOICES.map((choice) => ({ choice, count: 0 })),
-  orders: []
+  orders: [],
+  cartItems: []
 };
 
 module.exports = {

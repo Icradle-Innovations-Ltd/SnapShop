@@ -85,30 +85,44 @@ model Category {
 }
 
 model Product {
-  id            String        @id @default(cuid())
+  id            String         @id @default(cuid())
   name          String
-  slug          String        @unique
+  slug          String         @unique
   description   String
-  sku           String        @unique
+  sku           String         @unique
   price         Int
-  stockQuantity Int           @default(0)
-  featured      Boolean       @default(false)
-  active        Boolean       @default(true)
-  status        ProductStatus @default(DRAFT)
+  stockQuantity Int            @default(0)
+  featured      Boolean        @default(false)
+  active        Boolean        @default(true)
+  status        ProductStatus  @default(DRAFT)
   visualCode    String
+  imageUrl      String?
   categoryId    String
   storeId       String
   createdById   String?
-  category      Category      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  store         Store         @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  createdBy     User?         @relation(fields: [createdById], references: [id], onDelete: SetNull)
+  category      Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  store         Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  createdBy     User?          @relation(fields: [createdById], references: [id], onDelete: SetNull)
   orderItems    OrderItem[]
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  images        ProductImage[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@index([categoryId])
   @@index([storeId])
   @@index([createdById])
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String
+  url       String
+  alt       String?
+  position  Int      @default(0)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([productId])
 }
 
 model ContactMessage {

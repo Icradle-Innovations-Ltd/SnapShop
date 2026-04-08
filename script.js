@@ -183,11 +183,22 @@ function confirmDialog(title, message) {
 
 /* --- Product Image Helper --- */
 function getProductImage(product) {
+  /* Prefer uploaded images array */
+  if (product.images && product.images.length) {
+    return `<img src="${product.images[0].url}" alt="${product.images[0].alt || product.name}" loading="lazy">`;
+  }
   if (product.imageUrl) return `<img src="${product.imageUrl}" alt="${product.name}" loading="lazy">`;
   const img = product.image || PRODUCT_IMAGES[product.id] || PRODUCT_IMAGES[product.slug];
   if (img) return `<img src="${img}" alt="${product.name}" loading="lazy">`;
   const code = product.visualCode || product.category.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase();
   return `<div class="product-visual-code">${code}</div>`;
+}
+
+function getProductImages(product) {
+  if (product.images && product.images.length) return product.images;
+  const single = product.imageUrl || product.image || PRODUCT_IMAGES[product.id] || PRODUCT_IMAGES[product.slug];
+  if (single) return [{ url: single, alt: product.name }];
+  return [];
 }
 
 /* --- Loading Skeletons --- */
@@ -822,6 +833,19 @@ function bindGlobalEvents() {
       return;
     }
 
+    /* Product detail: image thumbnail switching */
+    const thumbBtn = event.target.closest("[data-thumb-url]");
+    if (thumbBtn) {
+      const mainImg = document.getElementById("detail-main-img");
+      if (mainImg) {
+        mainImg.src = thumbBtn.dataset.thumbUrl;
+        mainImg.alt = thumbBtn.dataset.thumbAlt || "";
+      }
+      document.querySelectorAll(".detail-thumb").forEach(t => t.classList.remove("is-active"));
+      thumbBtn.classList.add("is-active");
+      return;
+    }
+
     const pollButton = event.target.closest("[data-poll-choice]");
     if (pollButton) {
       const choice = pollButton.dataset.pollChoice;
@@ -949,10 +973,23 @@ function renderProductDetail() {
 
   const wishActive = isWishlisted(product.id);
   const related = getProducts().filter(p => p.categorySlug === product.categorySlug && p.id !== product.id).slice(0, 3);
+  const allImages = getProductImages(product);
+  const mainImage = allImages.length ? `<img src="${allImages[0].url}" alt="${allImages[0].alt || product.name}" id="detail-main-img" loading="lazy">` : getProductImage(product);
 
   container.innerHTML = `
     <div class="product-detail-layout">
-      <div class="product-detail-image">${getProductImage(product)}</div>
+      <div class="product-detail-image-wrapper">
+        <div class="product-detail-image">${mainImage}</div>
+        ${allImages.length > 1 ? `
+          <div class="product-detail-thumbnails">
+            ${allImages.map((img, i) => `
+              <button class="detail-thumb${i === 0 ? " is-active" : ""}" type="button" data-thumb-url="${img.url}" data-thumb-alt="${img.alt || product.name}">
+                <img src="${img.url}" alt="${img.alt || product.name}" loading="lazy">
+              </button>
+            `).join("")}
+          </div>
+        ` : ""}
+      </div>
       <div class="product-detail-info">
         <nav class="breadcrumb"><a href="index.html">Home</a> <span>/</span> <a href="shop.html">Shop</a> <span>/</span> <span aria-current="page">${product.name}</span></nav>
         <h1>${product.name}</h1>

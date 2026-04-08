@@ -39,6 +39,7 @@ function createApp() {
   app.use(express.urlencoded({ extended: true }));
 
   app.use("/assets", express.static(path.join(ROOT_DIR, "assets")));
+  app.use("/uploads", express.static(path.join(ROOT_DIR, "uploads")));
   app.get("/styles.css", (req, res) => res.sendFile(path.join(ROOT_DIR, "styles.css")));
   app.get("/script.js", (req, res) => res.sendFile(path.join(ROOT_DIR, "script.js")));
   app.get("/auth-ui.js", (req, res) => res.sendFile(path.join(ROOT_DIR, "auth-ui.js")));

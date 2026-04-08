@@ -1,4 +1,6 @@
 const express = require("express");
+const path = require("path");
+const multer = require("multer");
 const {
   createVendorStore,
   updateVendorStore,
@@ -6,11 +8,33 @@ const {
   createVendorProduct,
   updateVendorProduct,
   deleteVendorProduct,
+  addProductImages,
+  deleteProductImage,
   listVendorOrders,
   updateVendorOrderStatus
 } = require("../services/storeService");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { assertNonEmptyString } = require("../utils/validation");
+
+const storage = multer.diskStorage({
+  destination: path.join(__dirname, "../../uploads/products"),
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`);
+  }
+});
+
+function fileFilter(req, file, cb) {
+  const allowed = [".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"];
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (allowed.includes(ext)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only image files (jpg, png, gif, webp, svg) are allowed."));
+  }
+}
+
+const upload = multer({ storage, fileFilter, limits: { fileSize: 5 * 1024 * 1024 } });
 
 const router = express.Router();
 
@@ -73,6 +97,27 @@ router.delete("/products/:id", async (req, res, next) => {
   try {
     const result = await deleteVendorProduct(req.auth.user.id, req.params.id);
     res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/products/:id/images", upload.array("images", 5), async (req, res, next) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: "At least one image file is required." });
+    }
+    const product = await addProductImages(req.auth.user.id, req.params.id, req.files);
+    res.json({ message: "Images uploaded successfully.", product });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/products/:id/images/:imageId", async (req, res, next) => {
+  try {
+    const product = await deleteProductImage(req.auth.user.id, req.params.id, req.params.imageId);
+    res.json({ message: "Image deleted.", product });
   } catch (error) {
     next(error);
   }

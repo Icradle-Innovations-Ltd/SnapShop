@@ -20,6 +20,9 @@ function sanitizeUser(user) {
 }
 
 function serializeProduct(product) {
+  const images = (product.images || [])
+    .sort((a, b) => (a.position || 0) - (b.position || 0))
+    .map((img) => ({ id: img.id, url: img.url, alt: img.alt || "", position: img.position || 0 }));
   return {
     id: product.id,
     name: product.name,
@@ -37,7 +40,8 @@ function serializeProduct(product) {
     active: product.active !== false,
     status: product.status,
     visualCode: product.visualCode,
-    imageUrl: product.imageUrl || null
+    imageUrl: images.length > 0 ? images[0].url : (product.imageUrl || null),
+    images
   };
 }
 
@@ -226,7 +230,8 @@ async function listProducts(filters = {}) {
     },
     include: {
       category: true,
-      store: true
+      store: true,
+      images: { orderBy: { position: "asc" } }
     },
     orderBy: [
       { featured: "desc" },
@@ -650,7 +655,8 @@ async function createVendorProduct(userId, payload) {
     },
     include: {
       category: true,
-      store: true
+      store: true,
+      images: { orderBy: { position: "asc" } }
     }
   });
 
@@ -690,7 +696,8 @@ async function updateVendorProduct(userId, productId, payload) {
     },
     include: {
       category: true,
-      store: true
+      store: true,
+      images: { orderBy: { position: "asc" } }
     }
   });
 
@@ -712,7 +719,8 @@ async function updateVendorProduct(userId, productId, payload) {
     },
     include: {
       category: true,
-      store: true
+      store: true,
+      images: { orderBy: { position: "asc" } }
     }
   });
 
@@ -1367,6 +1375,195 @@ async function cancelCustomerOrder(userId, orderNumber) {
   });
 }
 
+async function addProductImages(userId, productId, imageFiles) {
+  const vendorProfile = await getVendorProfileByUser(userId);
+  if (!vendorProfile?.store) {
+    throw new Error("Vendor store not found.");
+  }
+
+  if (!hasDatabase) {
+    const product = memoryStore.products.find((p) => p.id === productId && p.storeId === vendorProfile.store.id);
+    if (!product) throw new Error("Product not found in vendor store.");
+    if (!product.images) product.images = [];
+    const startPos = product.images.length;
+    const newImages = imageFiles.map((f, i) => ({
+      id: `img-${Date.now()}-${i}`,
+      productId,
+      url: `/uploads/products/${f.filename}`,
+      alt: product.name,
+      position: startPos + i,
+      createdAt: new Date().toISOString()
+    }));
+    product.images.push(...newImages);
+    if (!product.imageUrl && newImages.length > 0) {
+      product.imageUrl = newImages[0].url;
+    }
+    return serializeProduct(product);
+  }
+
+  const product = await prisma.product.findFirst({
+    where: { id: productId, storeId: vendorProfile.store.id }
+  });
+  if (!product) throw new Error("Product not found in vendor store.");
+
+  const existingCount = await prisma.productImage.count({ where: { productId } });
+  await prisma.productImage.createMany({
+    data: imageFiles.map((f, i) => ({
+      productId,
+      url: `/uploads/products/${f.filename}`,
+      alt: product.name,
+      position: existingCount + i
+    }))
+  });
+
+  if (!product.imageUrl && imageFiles.length > 0) {
+    await prisma.product.update({
+      where: { id: productId },
+      data: { imageUrl: `/uploads/products/${imageFiles[0].filename}` }
+    });
+  }
+
+  const updated = await prisma.product.findUnique({
+    where: { id: productId },
+    include: { category: true, store: true, images: { orderBy: { position: "asc" } } }
+  });
+  return serializeProduct(updated);
+}
+
+async function deleteProductImage(userId, productId, imageId) {
+  const vendorProfile = await getVendorProfileByUser(userId);
+  if (!vendorProfile?.store) {
+    throw new Error("Vendor store not found.");
+  }
+
+  if (!hasDatabase) {
+    const product = memoryStore.products.find((p) => p.id === productId && p.storeId === vendorProfile.store.id);
+    if (!product) throw new Error("Product not found in vendor store.");
+    if (!product.images) product.images = [];
+    const idx = product.images.findIndex((img) => img.id === imageId);
+    if (idx === -1) throw new Error("Image not found.");
+    const removed = product.images.splice(idx, 1)[0];
+    if (product.imageUrl === removed.url) {
+      product.imageUrl = product.images.length > 0 ? product.images[0].url : null;
+    }
+    return serializeProduct(product);
+  }
+
+  const product = await prisma.product.findFirst({
+    where: { id: productId, storeId: vendorProfile.store.id }
+  });
+  if (!product) throw new Error("Product not found in vendor store.");
+
+  const image = await prisma.productImage.findFirst({
+    where: { id: imageId, productId }
+  });
+  if (!image) throw new Error("Image not found.");
+
+  await prisma.productImage.delete({ where: { id: imageId } });
+
+  if (product.imageUrl === image.url) {
+    const firstImage = await prisma.productImage.findFirst({
+      where: { productId },
+      orderBy: { position: "asc" }
+    });
+    await prisma.product.update({
+      where: { id: productId },
+      data: { imageUrl: firstImage?.url || null }
+    });
+  }
+
+  const updated = await prisma.product.findUnique({
+    where: { id: productId },
+    include: { category: true, store: true, images: { orderBy: { position: "asc" } } }
+  });
+  return serializeProduct(updated);
+}
+
+async function adminUpdateProduct(productId, payload) {
+  if (!hasDatabase) {
+    const product = memoryStore.products.find((p) => p.id === productId);
+    if (!product) throw new Error("Product not found.");
+    Object.assign(product, {
+      ...(payload.status ? { status: payload.status } : {}),
+      ...(payload.featured !== undefined ? { featured: Boolean(payload.featured) } : {}),
+      ...(payload.active !== undefined ? { active: Boolean(payload.active) } : {}),
+      updatedAt: new Date().toISOString()
+    });
+    return serializeProduct(product);
+  }
+
+  const updated = await prisma.product.update({
+    where: { id: productId },
+    data: {
+      ...(payload.status ? { status: payload.status } : {}),
+      ...(payload.featured !== undefined ? { featured: Boolean(payload.featured) } : {}),
+      ...(payload.active !== undefined ? { active: Boolean(payload.active) } : {})
+    },
+    include: { category: true, store: true, images: { orderBy: { position: "asc" } } }
+  });
+  return serializeProduct(updated);
+}
+
+async function adminDeleteProduct(productId) {
+  if (!hasDatabase) {
+    const idx = memoryStore.products.findIndex((p) => p.id === productId);
+    if (idx === -1) throw new Error("Product not found.");
+    memoryStore.products.splice(idx, 1);
+    return { message: "Product deleted." };
+  }
+
+  const product = await prisma.product.findUnique({ where: { id: productId } });
+  if (!product) throw new Error("Product not found.");
+  await prisma.product.delete({ where: { id: productId } });
+  return { message: "Product deleted." };
+}
+
+async function adminGetStoreDetails(storeId) {
+  if (!hasDatabase) {
+    const store = memoryStore.stores.find((s) => s.id === storeId);
+    if (!store) throw new Error("Store not found.");
+    const vendor = memoryStore.vendorProfiles.find((v) => v.id === store.vendorProfileId);
+    const user = vendor ? memoryStore.users.find((u) => u.id === vendor.userId) : null;
+    const products = memoryStore.products.filter((p) => p.storeId === storeId).map(serializeProduct);
+    return { ...store, vendor: vendor ? { ...vendor, user: user ? { name: user.name, email: user.email } : null } : null, products };
+  }
+
+  const store = await prisma.store.findUnique({
+    where: { id: storeId },
+    include: {
+      vendorProfile: { include: { user: { select: { name: true, email: true } } } },
+      products: { include: { category: true, store: true, images: { orderBy: { position: "asc" } } } }
+    }
+  });
+  if (!store) throw new Error("Store not found.");
+  return {
+    ...store,
+    vendor: store.vendorProfile ? { ...store.vendorProfile, user: store.vendorProfile.user } : null,
+    products: store.products.map(serializeProduct)
+  };
+}
+
+async function adminUpdateStore(storeId, payload) {
+  if (!hasDatabase) {
+    const store = memoryStore.stores.find((s) => s.id === storeId);
+    if (!store) throw new Error("Store not found.");
+    if (payload.status) store.status = payload.status;
+    if (payload.name) { store.name = payload.name.trim(); store.slug = slugify(payload.name) || store.slug; }
+    if (payload.description) store.description = payload.description.trim();
+    store.updatedAt = new Date().toISOString();
+    return store;
+  }
+
+  return prisma.store.update({
+    where: { id: storeId },
+    data: {
+      ...(payload.status ? { status: payload.status } : {}),
+      ...(payload.name ? { name: payload.name.trim(), slug: slugify(payload.name) } : {}),
+      ...(payload.description ? { description: payload.description.trim() } : {})
+    }
+  });
+}
+
 module.exports = {
   listCategories,
   listProducts,
@@ -1382,6 +1579,8 @@ module.exports = {
   updateVendorProduct,
   deleteVendorProduct,
   updateVendorStore,
+  addProductImages,
+  deleteProductImage,
   addCustomerAddress,
   createOrder,
   getOrderByNumber,
@@ -1400,5 +1599,9 @@ module.exports = {
   listVendorOrders,
   updateVendorOrderStatus,
   listContactMessages,
+  adminUpdateProduct,
+  adminDeleteProduct,
+  adminGetStoreDetails,
+  adminUpdateStore,
   POLL_CHOICES
 };

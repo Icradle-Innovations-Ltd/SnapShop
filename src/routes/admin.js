@@ -7,7 +7,11 @@ const {
   toggleUserActive,
   updateOrderStatus,
   listProducts,
-  listContactMessages
+  listContactMessages,
+  adminUpdateProduct,
+  adminDeleteProduct,
+  adminGetStoreDetails,
+  adminUpdateStore
 } = require("../services/storeService");
 const { requireAuth, requireRole } = require("../middleware/auth");
 const { prisma, hasDatabase } = require("../lib/prisma");
@@ -146,6 +150,42 @@ router.get("/contact-messages", async (req, res, next) => {
   try {
     const messages = await listContactMessages();
     res.json({ messages });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/products/:id", async (req, res, next) => {
+  try {
+    const product = await adminUpdateProduct(req.params.id, req.body);
+    res.json({ message: "Product updated.", product });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/products/:id", async (req, res, next) => {
+  try {
+    const result = await adminDeleteProduct(req.params.id);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/stores/:id", async (req, res, next) => {
+  try {
+    const store = await adminGetStoreDetails(req.params.id);
+    res.json({ store });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/stores/:id", async (req, res, next) => {
+  try {
+    const store = await adminUpdateStore(req.params.id, req.body);
+    res.json({ message: "Store updated.", store });
   } catch (error) {
     next(error);
   }

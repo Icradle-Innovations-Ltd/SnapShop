@@ -879,3 +879,62 @@ details p { animation: fadeIn 300ms ease; }
 /* Video embed */
 .video-embed { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; border-radius: var(--radius); margin-top: 1rem; }
 .video-embed iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
+
+/* ─── Product Image Gallery (Dashboard) ─── */
+.product-image-gallery {
+  display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem;
+}
+.product-image-thumb {
+  position: relative; width: 72px; height: 72px; border-radius: 8px; overflow: hidden;
+  border: 2px solid var(--border); flex-shrink: 0;
+}
+.product-image-thumb img {
+  width: 100%; height: 100%; object-fit: cover; display: block;
+}
+.image-remove-btn {
+  position: absolute; top: 2px; right: 2px; width: 20px; height: 20px;
+  border-radius: 50%; border: none; background: rgba(220,38,38,0.85); color: #fff;
+  font-size: 14px; line-height: 1; cursor: pointer; display: grid; place-items: center;
+  opacity: 0; transition: opacity 0.2s;
+}
+.product-image-thumb:hover .image-remove-btn { opacity: 1; }
+
+/* ─── Image Upload Zone ─── */
+.image-upload-zone { margin-top: 0.5rem; }
+.image-dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 1rem; border: 2px dashed var(--border); border-radius: var(--radius);
+  cursor: pointer; transition: border-color 0.2s, background 0.2s;
+  min-height: 60px; text-align: center;
+}
+.image-dropzone:hover { border-color: var(--brand); background: var(--brand-light); }
+.dropzone-label { font-size: 0.9rem; color: var(--muted); pointer-events: none; }
+.dropzone-preview {
+  display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.5rem; justify-content: center;
+}
+.dropzone-thumb {
+  width: 56px; height: 56px; object-fit: cover; border-radius: 6px;
+  border: 2px solid var(--border);
+}
+
+/* ─── Product Detail Image Gallery ─── */
+.product-detail-image-wrapper { display: flex; flex-direction: column; gap: 0.75rem; }
+.product-detail-thumbnails {
+  display: flex; gap: 0.5rem; overflow-x: auto; padding-bottom: 0.25rem;
+}
+.detail-thumb {
+  width: 64px; height: 64px; border: 2px solid var(--border); border-radius: 8px;
+  overflow: hidden; cursor: pointer; flex-shrink: 0; padding: 0;
+  background: none; transition: border-color 0.2s;
+}
+.detail-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.detail-thumb.is-active, .detail-thumb:hover { border-color: var(--brand); }
+
+/* ─── Admin Store Detail Inline ─── */
+.admin-store-detail .card { border: 1px solid var(--border); }
+
+/* ─── Utility ─── */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}

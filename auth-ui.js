@@ -261,6 +261,7 @@
       { key: "vendors", label: "Vendors" },
       { key: "orders", label: "Orders" },
       { key: "products", label: "Products" },
+      { key: "stores", label: "Stores" },
       { key: "messages", label: "Messages" }
     ];
 
@@ -410,31 +411,59 @@
       tabContent = `
         <section class="card dashboard-section">
           <h2>All Products (${allProducts.length})</h2>
-          <div class="dash-table-wrap">
-            <table class="dash-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Store</th>
-                  <th>Category</th>
-                  <th>Price</th>
-                  <th>Stock</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${allProducts.length ? allProducts.map((p) => `
-                  <tr>
-                    <td data-label="Name">${safe(p.name)}</td>
-                    <td data-label="Store">${safe(p.storeName || "N/A")}</td>
-                    <td data-label="Category">${safe(p.category || "")}</td>
-                    <td data-label="Price">${formatMoney(p.price)}</td>
-                    <td data-label="Stock">${safe(p.stockQuantity)}</td>
-                    <td data-label="Status"><span class="status-pill status-${(p.status || "").toLowerCase()}">${safe(roleLabel(p.status))}</span></td>
-                  </tr>
-                `).join("") : `<tr><td colspan="6" class="dashboard-empty">No products yet.</td></tr>`}
-              </tbody>
-            </table>
+          <div class="dashboard-list">
+            ${allProducts.length ? allProducts.map((p) => `
+              <article class="dashboard-item" id="admin-product-${safe(p.id)}">
+                <div class="dash-item-header">
+                  <h3>${safe(p.name)}</h3>
+                  <span class="status-pill status-${(p.status || "").toLowerCase()}">${safe(roleLabel(p.status))}</span>
+                </div>
+                <p class="dashboard-meta">${safe(p.storeName || "N/A")} &middot; ${safe(p.category || "")} &middot; ${formatMoney(p.price)} &middot; Stock: ${safe(p.stockQuantity)} &middot; ${p.featured ? "⭐ Featured" : "Not featured"}</p>
+                ${(p.images && p.images.length) ? `
+                  <div class="product-image-gallery">
+                    ${p.images.map((img) => `
+                      <div class="product-image-thumb">
+                        <img src="${safe(img.url)}" alt="${safe(img.alt || p.name)}" loading="lazy">
+                      </div>
+                    `).join("")}
+                  </div>
+                ` : (p.imageUrl ? `<p class="dashboard-meta"><a href="${safe(p.imageUrl)}" target="_blank">View Image</a></p>` : `<p class="dashboard-meta" style="color:var(--color-warning,#e67e22);">No images</p>`)}
+                <div class="dash-item-actions" style="margin-top:0.5rem;">
+                  <button class="button button-sm button-secondary" data-admin-toggle-featured="${safe(p.id)}" data-featured="${p.featured ? "true" : "false"}">
+                    ${p.featured ? "Remove Featured" : "Mark Featured"}
+                  </button>
+                  <button class="button button-sm button-secondary" data-admin-toggle-product-status="${safe(p.id)}" data-product-status="${p.status === "ACTIVE" ? "DRAFT" : "ACTIVE"}">
+                    ${p.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                  </button>
+                  <button class="button button-sm button-danger" data-admin-delete-product="${safe(p.id)}">Delete</button>
+                </div>
+              </article>
+            `).join("") : `<p class="dashboard-empty">No products yet.</p>`}
+          </div>
+        </section>`;
+    } else if (activeTab === "stores") {
+      const stores = allVendors.filter((v) => v.store).map((v) => ({ ...v.store, vendor: v }));
+      tabContent = `
+        <section class="card dashboard-section">
+          <h2>Vendor Stores (${stores.length})</h2>
+          <div class="dashboard-list">
+            ${stores.length ? stores.map((s) => `
+              <article class="dashboard-item">
+                <div class="dash-item-header">
+                  <h3>${safe(s.name)}</h3>
+                  <span class="status-pill status-${(s.status || "active").toLowerCase()}">${safe(roleLabel(s.status || "ACTIVE"))}</span>
+                </div>
+                <p class="dashboard-meta">Owner: ${safe(s.vendor?.user?.name || s.vendor?.businessName || "Unknown")} &middot; ${safe(s.vendor?.user?.email || "")}</p>
+                <p class="dashboard-meta">${safe(s.description || "No description")}</p>
+                <div class="dash-item-actions">
+                  <button class="button button-sm button-secondary" data-admin-view-store="${safe(s.id)}">View Store Details</button>
+                  <button class="button button-sm button-secondary" data-admin-toggle-store="${safe(s.id)}" data-store-status="${(s.status || "ACTIVE") === "ACTIVE" ? "SUSPENDED" : "ACTIVE"}">
+                    ${(s.status || "ACTIVE") === "ACTIVE" ? "Suspend Store" : "Activate Store"}
+                  </button>
+                </div>
+                <div class="admin-store-detail" id="admin-store-detail-${safe(s.id)}" style="display:none;margin-top:0.75rem;"></div>
+              </article>
+            `).join("") : `<p class="dashboard-empty">No vendor stores created yet.</p>`}
           </div>
         </section>`;
     } else if (activeTab === "messages") {
@@ -593,7 +622,6 @@
                 <label><span>Description</span><textarea name="description" rows="4" required></textarea></label>
                 <label><span>Price (UGX)</span><input name="price" type="number" min="1" required></label>
                 <label><span>Stock quantity</span><input name="stockQuantity" type="number" min="0" required></label>
-                <label><span>Image URL</span><input name="imageUrl" type="url" placeholder="https://example.com/image.jpg"></label>
                 <label>
                   <span>Status</span>
                   <select name="status">
@@ -604,6 +632,7 @@
                 <button class="button button-primary" type="submit">Save Product</button>
                 <p id="vendor-product-message" class="form-message" aria-live="polite"></p>
               </form>
+              <p class="dashboard-meta" style="margin-top:0.5rem;">After creating the product, you can upload images below.</p>
             ` : `<p class="dashboard-empty">Create and activate your store to start listing products.</p>`}
           </article>
           <article class="card dashboard-section">
@@ -615,8 +644,29 @@
                     <h3>${safe(p.name)}</h3>
                     <span class="status-pill">${safe(roleLabel(p.status))}</span>
                   </div>
-                  <p class="dashboard-meta">${safe(p.sku)} &middot; ${formatMoney(p.price)} &middot; Stock: ${safe(p.stockQuantity)}${p.imageUrl ? ` &middot; <a href="${safe(p.imageUrl)}" target="_blank">Image</a>` : ""}</p>
-                  <div class="dash-item-actions">
+                  <p class="dashboard-meta">${safe(p.sku)} &middot; ${formatMoney(p.price)} &middot; Stock: ${safe(p.stockQuantity)}</p>
+                  ${(p.images && p.images.length) ? `
+                    <div class="product-image-gallery">
+                      ${p.images.map((img) => `
+                        <div class="product-image-thumb">
+                          <img src="${safe(img.url)}" alt="${safe(img.alt || p.name)}" loading="lazy">
+                          <button class="image-remove-btn" data-remove-image="${safe(img.id)}" data-product-id="${safe(p.id)}" title="Remove image">&times;</button>
+                        </div>
+                      `).join("")}
+                    </div>
+                  ` : `<p class="dashboard-meta" style="color:var(--color-warning, #e67e22);">No images uploaded yet.</p>`}
+                  <div class="image-upload-zone" id="upload-zone-${safe(p.id)}">
+                    <form class="image-upload-form" data-product-upload="${safe(p.id)}">
+                      <label class="image-dropzone">
+                        <input type="file" name="images" accept="image/*" multiple class="sr-only">
+                        <span class="dropzone-label">📷 Click to upload images (max 5)</span>
+                        <span class="dropzone-preview"></span>
+                      </label>
+                      <button class="button button-sm button-primary" type="submit" style="margin-top:0.5rem;">Upload Images</button>
+                      <p class="form-message image-upload-message" aria-live="polite"></p>
+                    </form>
+                  </div>
+                  <div class="dash-item-actions" style="margin-top:0.5rem;">
                     <button class="button button-sm button-secondary" data-quick-status="${safe(p.id)}" data-next-status="${p.status === "ACTIVE" ? "DRAFT" : "ACTIVE"}">
                       Mark ${p.status === "ACTIVE" ? "Draft" : "Active"}
                     </button>
@@ -628,7 +678,6 @@
                     <label><span>Description</span><textarea name="description" rows="2">${safe(p.description || "")}</textarea></label>
                     <label><span>Price (UGX)</span><input name="price" type="number" min="1" value="${p.price}"></label>
                     <label><span>Stock</span><input name="stockQuantity" type="number" min="0" value="${p.stockQuantity}"></label>
-                    <label><span>Image URL</span><input name="imageUrl" type="url" value="${safe(p.imageUrl || "")}" placeholder="https://example.com/image.jpg"></label>
                     <div class="dash-item-actions">
                       <button class="button button-sm button-primary" type="submit">Save Changes</button>
                       <button class="button button-sm button-secondary" type="button" data-cancel-edit="${safe(p.id)}">Cancel</button>
@@ -1043,6 +1092,55 @@
       form.dataset.bound = "true";
     });
 
+    /* ── Image upload forms: preview + submit ── */
+    document.querySelectorAll(".image-upload-form").forEach((form) => {
+      if (form.dataset.bound === "true") return;
+      const fileInput = form.querySelector("input[type='file']");
+      const previewContainer = form.querySelector(".dropzone-preview");
+
+      fileInput.addEventListener("change", () => {
+        previewContainer.innerHTML = "";
+        Array.from(fileInput.files).forEach((file) => {
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = document.createElement("img");
+            img.src = e.target.result;
+            img.className = "dropzone-thumb";
+            img.alt = file.name;
+            previewContainer.appendChild(img);
+          };
+          reader.readAsDataURL(file);
+        });
+      });
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const productId = form.dataset.productUpload;
+        const msg = form.querySelector(".image-upload-message");
+        if (!fileInput.files.length) {
+          msg.textContent = "Please select at least one image.";
+          return;
+        }
+        const formData = new FormData();
+        Array.from(fileInput.files).forEach((f) => formData.append("images", f));
+        try {
+          const token = localStorage.getItem("token");
+          const res = await fetch(`/api/vendor/products/${productId}/images`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || "Upload failed");
+          toast("Images uploaded.");
+          await renderDashboard();
+        } catch (error) {
+          msg.textContent = error.message;
+        }
+      });
+      form.dataset.bound = "true";
+    });
+
     const addressForm = document.getElementById("address-form");
     if (addressForm && addressForm.dataset.bound !== "true") {
       addressForm.addEventListener("submit", async (event) => {
@@ -1192,6 +1290,108 @@
         return;
       }
 
+      /* Admin: Toggle product featured */
+      const toggleFeatured = event.target.closest("[data-admin-toggle-featured]");
+      if (toggleFeatured) {
+        const isFeatured = toggleFeatured.dataset.featured === "true";
+        try {
+          await request(`/admin/products/${toggleFeatured.dataset.adminToggleFeatured}`, {
+            method: "PATCH",
+            body: JSON.stringify({ featured: !isFeatured })
+          });
+          toast(isFeatured ? "Removed from featured." : "Marked as featured.");
+          await renderDashboard();
+        } catch (error) {
+          toast(error.message);
+        }
+        return;
+      }
+
+      /* Admin: Toggle product status */
+      const adminToggleProduct = event.target.closest("[data-admin-toggle-product-status]");
+      if (adminToggleProduct) {
+        try {
+          await request(`/admin/products/${adminToggleProduct.dataset.adminToggleProductStatus}`, {
+            method: "PATCH",
+            body: JSON.stringify({ status: adminToggleProduct.dataset.productStatus })
+          });
+          toast("Product status updated.");
+          await renderDashboard();
+        } catch (error) {
+          toast(error.message);
+        }
+        return;
+      }
+
+      /* Admin: Delete product */
+      const adminDeleteProduct = event.target.closest("[data-admin-delete-product]");
+      if (adminDeleteProduct) {
+        if (!confirm("Delete this product permanently? This cannot be undone.")) return;
+        try {
+          await request(`/admin/products/${adminDeleteProduct.dataset.adminDeleteProduct}`, { method: "DELETE" });
+          toast("Product deleted.");
+          await renderDashboard();
+        } catch (error) {
+          toast(error.message);
+        }
+        return;
+      }
+
+      /* Admin: View store details */
+      const viewStore = event.target.closest("[data-admin-view-store]");
+      if (viewStore) {
+        const storeId = viewStore.dataset.adminViewStore;
+        const detailDiv = document.getElementById(`admin-store-detail-${storeId}`);
+        if (!detailDiv) return;
+        if (detailDiv.style.display !== "none") {
+          detailDiv.style.display = "none";
+          return;
+        }
+        try {
+          const data = await request(`/admin/stores/${storeId}`);
+          const store = data.store;
+          detailDiv.innerHTML = `
+            <div class="card" style="background:var(--color-bg);padding:1rem;">
+              <h4>${safe(store.name)} — Products (${store.products?.length || 0})</h4>
+              <p class="dashboard-meta">${safe(store.description || "No description")}</p>
+              ${store.products?.length ? store.products.map((p) => `
+                <div class="dashboard-item" style="margin-top:0.5rem;">
+                  <strong>${safe(p.name)}</strong> &middot; ${formatMoney(p.price)} &middot; Stock: ${p.stockQuantity} &middot; <span class="status-pill status-${(p.status || "").toLowerCase()}">${safe(roleLabel(p.status))}</span>
+                  ${(p.images && p.images.length) ? `
+                    <div class="product-image-gallery" style="margin-top:0.25rem;">
+                      ${p.images.map((img) => `<div class="product-image-thumb"><img src="${safe(img.url)}" alt="${safe(img.alt || p.name)}" loading="lazy"></div>`).join("")}
+                    </div>
+                  ` : ""}
+                </div>
+              `).join("") : `<p class="dashboard-empty">No products in this store.</p>`}
+            </div>
+          `;
+          detailDiv.style.display = "block";
+        } catch (error) {
+          toast(error.message);
+        }
+        return;
+      }
+
+      /* Admin: Toggle store status */
+      const toggleStore = event.target.closest("[data-admin-toggle-store]");
+      if (toggleStore) {
+        const storeId = toggleStore.dataset.adminToggleStore;
+        const newStatus = toggleStore.dataset.storeStatus;
+        if (!confirm(`${newStatus === "SUSPENDED" ? "Suspend" : "Activate"} this store?`)) return;
+        try {
+          await request(`/admin/stores/${storeId}`, {
+            method: "PATCH",
+            body: JSON.stringify({ status: newStatus })
+          });
+          toast(`Store ${newStatus === "SUSPENDED" ? "suspended" : "activated"}.`);
+          await renderDashboard();
+        } catch (error) {
+          toast(error.message);
+        }
+        return;
+      }
+
       /* Vendor: Toggle product status */
       const quickStatus = event.target.closest("[data-quick-status]");
       if (quickStatus) {
@@ -1201,6 +1401,22 @@
             body: JSON.stringify({ status: quickStatus.dataset.nextStatus })
           });
           toast("Product status updated.");
+          await renderDashboard();
+        } catch (error) {
+          toast(error.message);
+        }
+        return;
+      }
+
+      /* Vendor: Remove product image */
+      const removeImage = event.target.closest("[data-remove-image]");
+      if (removeImage) {
+        if (!confirm("Remove this image?")) return;
+        const imageId = removeImage.dataset.removeImage;
+        const productId = removeImage.dataset.productId;
+        try {
+          await request(`/vendor/products/${productId}/images/${imageId}`, { method: "DELETE" });
+          toast("Image removed.");
           await renderDashboard();
         } catch (error) {
           toast(error.message);

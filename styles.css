@@ -263,6 +263,7 @@ button, input, select, textarea { font: inherit; }
 .button-primary:hover { background: var(--brand-strong); }
 .button-secondary { background: var(--surface); border-color: var(--border); color: var(--brand); }
 .button-secondary:hover { background: var(--brand-light); border-color: var(--brand); }
+.button-secondary[href*="register.html"] { color: #fff; }
 .button-danger { background: var(--danger-light); border-color: var(--danger); color: var(--danger); }
 .button-danger:hover { background: var(--danger); color: #fff; }
 .button-small { padding: 0.5rem 0.9rem; font-size: 0.88rem; }
